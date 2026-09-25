@@ -1,0 +1,40 @@
+# -------------------------------------------------------------
+# .NET / Visual Studio
+# -------------------------------------------------------------
+bin/
+obj/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.pyc
+TestResults/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.iis*
+*.log
+*.nupkg
+*.snupkg
+*.swp
+
+# -------------------------------------------------------------
+# Secretos locales (nunca commitear)
+# -------------------------------------------------------------
+appsettings.Local.json
+secrets.json
+.env
+
+# -------------------------------------------------------------
+# IDE / SO
+# -------------------------------------------------------------
+.idea/
+.ionide/
+Thumbs.db
+.DS_Store

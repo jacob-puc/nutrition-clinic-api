@@ -1,0 +1,25 @@
+﻿using FluentValidation;
+
+namespace nutriclinica_backend.Features.Antropometria.DTOs.Validators;
+
+public class CrearMedidaValidator : AbstractValidator<CrearMedidaDto>
+{
+    public CrearMedidaValidator()
+    {
+        RuleFor(x => x.Peso)
+            .GreaterThan(0).WithMessage("El peso debe ser mayor a 0 kg.")
+            .LessThan(400).WithMessage("Ingresa un peso válido.");
+
+        RuleFor(x => x.Estatura)
+            .GreaterThan(0).WithMessage("La estatura debe ser mayor a 0 cm.")
+            .LessThan(300).WithMessage("Ingresa una estatura válida en centímetros.");
+
+        RuleFor(x => x.PorcentajeGrasa)
+            .InclusiveBetween(0, 100).When(x => x.PorcentajeGrasa.HasValue)
+            .WithMessage("El porcentaje de grasa debe estar entre 0% y 100%.");
+
+        RuleFor(x => x.PorcentajeMasaMuscular)
+            .InclusiveBetween(0, 100).When(x => x.PorcentajeMasaMuscular.HasValue)
+            .WithMessage("El porcentaje de masa muscular debe estar entre 0% y 100%.");
+    }
+}
