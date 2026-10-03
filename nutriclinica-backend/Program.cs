@@ -99,12 +99,15 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Detras de un proxy que ya termina TLS (Render, Cloud Run, App Runner)
 if (!app.Environment.IsDevelopment())
 {
     app.UseForwardedHeaders();
 }
-
-app.UseHttpsRedirection();
+else
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
