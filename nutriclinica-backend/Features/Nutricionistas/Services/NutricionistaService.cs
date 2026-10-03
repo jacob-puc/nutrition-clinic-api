@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
 using nutriclinica_backend.Core.Enums;
+using nutriclinica_backend.Features.Auth.Services;
 using nutriclinica_backend.Features.Nutricionistas.DTOs;
 using nutriclinica_backend.Features.Nutricionistas.Interfaces;
 using nutriclinica_backend.Infrastructure.Persistence;
@@ -48,10 +49,49 @@ public class NutricionistaService : INutricionistaService
             IsActive = true
         };
 
+        if (!string.IsNullOrWhiteSpace(dto.Contrasena))
+        {
+            ValidarContrasena(dto.Contrasena);
+            nutricionista.PasswordHash = AuthService.HashPassword(nutricionista, dto.Contrasena);
+        }
+
         _context.Nutricionistas.Add(nutricionista);
         await _context.SaveChangesAsync();
 
         return MapToDto(nutricionista);
+    }
+
+    public async Task EstablecerContrasenaAsync(Guid id, string contrasena)
+    {
+        ValidarContrasena(contrasena);
+
+        var nutricionista = await _context.Nutricionistas
+            .FirstOrDefaultAsync(n => n.Id == id && n.IsActive)
+            ?? throw new KeyNotFoundException($"No se encontró un nutricionista activo con ID: {id}");
+
+        nutricionista.PasswordHash = AuthService.HashPassword(nutricionista, contrasena);
+        nutricionista.RefreshToken = null;
+        nutricionista.RefreshTokenExpiresAt = null;
+
+        await _context.SaveChangesAsync();
+    }
+
+    private static void ValidarContrasena(string contrasena)
+    {
+        if (contrasena.Length < 8)
+        {
+            throw new ValidationException("La contraseña debe tener al menos 8 caracteres.");
+        }
+
+        if (!char.IsUpper(contrasena[0]) || !char.IsLower(contrasena[0]))
+        {
+            throw new ValidationException("La contraseña debe comenzar con una letra mayúscula.");
+        }
+
+        if (!contrasena.Any(char.IsDigit))
+        {
+            throw new ValidationException("La contraseña debe incluir al menos un número.");
+        }
     }
 
     public async Task<NutricionistaRespuestaDto> ActualizarNutricionistaAsync(Guid id, ActualizarNutricionistaDto dto)

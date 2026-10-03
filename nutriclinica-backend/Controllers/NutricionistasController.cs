@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.Nutricionistas.DTOs;
 using nutriclinica_backend.Features.Nutricionistas.Interfaces;
@@ -5,6 +6,7 @@ using nutriclinica_backend.Features.Nutricionistas.Interfaces;
 namespace nutriclinica_backend.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/nutricionistas")]
 public class NutricionistasController : ControllerBase
 {
@@ -48,6 +50,15 @@ public class NutricionistasController : ControllerBase
     public async Task<IActionResult> EliminarNutricionista(Guid id)
     {
         await _nutricionistaService.EliminarNutricionistaAsync(id);
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/contrasena")]
+    public async Task<IActionResult> EstablecerContrasena(
+        Guid id,
+        [FromBody] EstablecerContrasenaDto dto)
+    {
+        await _nutricionistaService.EstablecerContrasenaAsync(id, dto.Contrasena);
         return NoContent();
     }
 }

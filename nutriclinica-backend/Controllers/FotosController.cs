@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.ExpedienteMedia.DTOs;
 using nutriclinica_backend.Features.ExpedienteMedia.Interfaces;
@@ -5,6 +6,7 @@ using nutriclinica_backend.Features.ExpedienteMedia.Interfaces;
 namespace nutriclinica_backend.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/pacientes/{pacienteId:guid}/fotos")]
 public class FotosController : ControllerBase
 {

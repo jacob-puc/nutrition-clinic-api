@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.HistorialesClinicos.DTOs;
 using nutriclinica_backend.Features.HistorialesClinicos.Interfaces;
 
 namespace nutriclinica_backend.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/pacientes/{pacienteId:guid}/historial-clinico")]
 public class HistorialesClinicosController : ControllerBase
 {

@@ -7,4 +7,5 @@ public class CrearNutricionistaDto
     public string? Telefono { get; set; }
     public string? NumeroColegiatura { get; set; }
     public string? Especialidad { get; set; }
+    public string? Contrasena { get; set; }
 }

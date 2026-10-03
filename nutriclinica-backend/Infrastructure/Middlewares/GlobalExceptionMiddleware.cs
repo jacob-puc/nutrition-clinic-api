@@ -36,6 +36,10 @@ public class GlobalExceptionMiddleware
                     .Select(e => new ErrorDetalleDto { Campo = e.PropertyName, Mensaje = e.ErrorMessage })
                     .ToList());
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            await EscribirErrorAsync(context, StatusCodes.Status401Unauthorized, "NO_AUTORIZADO", ex.Message);
+        }
         catch (ConflictException ex)
         {
             await EscribirErrorAsync(context, StatusCodes.Status409Conflict, "CONFLICTO", ex.Message);

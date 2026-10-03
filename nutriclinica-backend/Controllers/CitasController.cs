@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.Citas.DTOs;
 using nutriclinica_backend.Features.Citas.Interfaces;
@@ -5,6 +6,7 @@ using nutriclinica_backend.Features.Citas.Interfaces;
 namespace nutriclinica_backend.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/citas")]
 public class CitasController : ControllerBase
 {

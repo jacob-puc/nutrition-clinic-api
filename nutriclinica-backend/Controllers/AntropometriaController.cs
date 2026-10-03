@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.Antropometria.DTOs;
 using nutriclinica_backend.Features.Antropometria.Interfaces;
 
 namespace nutriclinica_backend.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/pacientes/{pacienteId:guid}/medidas")]
 public class AntropometriaController : ControllerBase
 {

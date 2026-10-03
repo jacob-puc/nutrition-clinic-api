@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.Antropometria.DTOs;
 using nutriclinica_backend.Features.Antropometria.Interfaces;
@@ -9,6 +10,7 @@ using nutriclinica_backend.Features.ExpedienteMedia.Interfaces;
 namespace nutriclinica_backend.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/consultas")]
 public class ConsultasController : ControllerBase
 {
@@ -66,6 +68,7 @@ public class ConsultasController : ControllerBase
 /// consulta, asi que el cliente nunca envia el pacienteId ni el consultaId por separado.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/consultas/{consultaId:guid}")]
 public class ConsultasRegistrosController : ControllerBase
 {

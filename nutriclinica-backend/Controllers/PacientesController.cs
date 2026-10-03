@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.Pacientes.DTOs;
 using nutriclinica_backend.Features.Pacientes.Interfaces;
 
 namespace nutriclinica_backend.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/pacientes")]
 public class PacientesController : ControllerBase
 {

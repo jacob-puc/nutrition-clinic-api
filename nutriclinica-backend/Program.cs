@@ -1,8 +1,14 @@
+using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Npgsql;
+using nutriclinica_backend.Features.Auth.Interfaces;
+using nutriclinica_backend.Features.Auth.Services;
+using nutriclinica_backend.Infrastructure.Security;
 using nutriclinica_backend.Features.Antropometria.Interfaces;
 using nutriclinica_backend.Features.Antropometria.Services;
 using nutriclinica_backend.Features.Citas.Interfaces;
@@ -47,6 +53,34 @@ var postgresBuilder = new NpgsqlConnectionStringBuilder(connectionString)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(postgresBuilder.ConnectionString));
 
+var jwtConfig = builder.Configuration
+    .GetSection(JwtConfig.SectionName)
+    .Get<JwtConfig>() ?? new JwtConfig();
+
+jwtConfig.Validar();
+
+builder.Services.AddSingleton(jwtConfig);
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtConfig.Issuer,
+            ValidAudience = jwtConfig.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtConfig.Secret)),
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddScoped<IPacienteService, PacienteService>();
 builder.Services.AddScoped<IHistorialClinicoService, HistorialClinicoService>();
 builder.Services.AddScoped<IAntropometriaService, AntropometriaService>();
@@ -54,6 +88,7 @@ builder.Services.AddScoped<IExpedienteMediaService, ExpedienteMediaService>();
 builder.Services.AddScoped<INutricionistaService, NutricionistaService>();
 builder.Services.AddScoped<ICitaService, CitaService>();
 builder.Services.AddScoped<IConsultaService, ConsultaService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
@@ -93,6 +128,7 @@ builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 await app.Services.MigrateAsync(app.Logger);
+await app.Services.SeedAsync(app.Configuration, app.Logger);
 
 if (app.Environment.IsDevelopment())
 {
@@ -113,6 +149,7 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseCors("Frontend");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");
