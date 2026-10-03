@@ -1,6 +1,7 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
+using nutriclinica_backend.Core.Utils;
 using nutriclinica_backend.Features.Antropometria.DTOs;
 using nutriclinica_backend.Features.ExpedienteMedia.DTOs;
 using nutriclinica_backend.Features.HistorialesClinicos.DTOs;
@@ -15,15 +16,18 @@ public class PacienteService : IPacienteService
     private readonly ApplicationDbContext _context;
     private readonly IValidator<CrearPacienteDto> _crearPacienteValidator;
     private readonly IValidator<ActualizarPacienteDto> _actualizarPacienteValidator;
+    private readonly IValidator<ActualizarObjetivoPacienteDto> _actualizarObjetivoValidator;
 
     public PacienteService(
         ApplicationDbContext context,
         IValidator<CrearPacienteDto> crearPacienteValidator,
-        IValidator<ActualizarPacienteDto> actualizarPacienteValidator)
+        IValidator<ActualizarPacienteDto> actualizarPacienteValidator,
+        IValidator<ActualizarObjetivoPacienteDto> actualizarObjetivoValidator)
     {
         _context = context;
         _crearPacienteValidator = crearPacienteValidator;
         _actualizarPacienteValidator = actualizarPacienteValidator;
+        _actualizarObjetivoValidator = actualizarObjetivoValidator;
     }
 
     public async Task<PacienteRespuestaDto> CrearPacienteAsync(CrearPacienteDto dto)
@@ -38,25 +42,13 @@ public class PacienteService : IPacienteService
             CorreoElectronico = dto.CorreoElectronico,
             FechaNacimiento = dto.FechaNacimiento,
             Sexo = dto.Sexo,
-            Edad = CalcularEdad(dto.FechaNacimiento),
             IsActive = true
         };
 
         _context.Pacientes.Add(paciente);
         await _context.SaveChangesAsync();
 
-        return new PacienteRespuestaDto
-        {
-            Id = paciente.Id,
-            NombreCompleto = paciente.NombreCompleto,
-            Direccion = paciente.Direccion,
-            Telefono = paciente.Telefono,
-            CorreoElectronico = paciente.CorreoElectronico,
-            FechaNacimiento = paciente.FechaNacimiento,
-            Edad = paciente.Edad,
-            Sexo = paciente.Sexo,
-            FechaRegistro = paciente.FechaRegistro
-        };
+        return MapToDto(paciente);
     }
 
     public async Task<PacienteRespuestaDto> ActualizarPacienteAsync(Guid id, ActualizarPacienteDto dto)
@@ -73,21 +65,28 @@ public class PacienteService : IPacienteService
         paciente.Direccion = dto.Direccion;
         paciente.FechaNacimiento = dto.FechaNacimiento;
         paciente.Sexo = dto.Sexo;
-        paciente.Edad = CalcularEdad(dto.FechaNacimiento);
 
         await _context.SaveChangesAsync();
 
-        return new PacienteRespuestaDto
-        {
-            Id = paciente.Id,
-            NombreCompleto = paciente.NombreCompleto,
-            CorreoElectronico = paciente.CorreoElectronico,
-            Telefono = paciente.Telefono,
-            Direccion = paciente.Direccion,
-            FechaNacimiento = paciente.FechaNacimiento,
-            Edad = paciente.Edad,
-            Sexo = paciente.Sexo
-        };
+        return MapToDto(paciente);
+    }
+
+    public async Task<PacienteRespuestaDto> ActualizarObjetivoAsync(
+        Guid id,
+        ActualizarObjetivoPacienteDto dto)
+    {
+        await _actualizarObjetivoValidator.ValidateAndThrowAsync(dto);
+
+        var paciente = await _context.Pacientes
+            .FirstOrDefaultAsync(p => p.Id == id && p.IsActive)
+            ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {id}");
+
+        paciente.TituloObjetivo = dto.TituloObjetivo?.Trim();
+        paciente.PesoObjetivo = dto.PesoObjetivo;
+
+        await _context.SaveChangesAsync();
+
+        return MapToDto(paciente);
     }
 
     public async Task EliminarPacienteAsync(Guid id)
@@ -107,38 +106,17 @@ public class PacienteService : IPacienteService
             .FirstOrDefaultAsync(p => p.Id == id && p.IsActive)
             ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {id}");
 
-        return new PacienteRespuestaDto
-        {
-            Id = paciente.Id,
-            NombreCompleto = paciente.NombreCompleto,
-            Direccion = paciente.Direccion,
-            Telefono = paciente.Telefono,
-            CorreoElectronico = paciente.CorreoElectronico,
-            FechaNacimiento = paciente.FechaNacimiento,
-            Edad = paciente.Edad,
-            Sexo = paciente.Sexo,
-            FechaRegistro = paciente.FechaRegistro
-        };
+        return MapToDto(paciente);
     }
 
     public async Task<IEnumerable<PacienteRespuestaDto>> ObtenerPacientesAsync()
     {
-        return await _context.Pacientes
+        var pacientes = await _context.Pacientes
             .AsNoTracking()
             .Where(p => p.IsActive)
-            .Select(p => new PacienteRespuestaDto
-            {
-                Id = p.Id,
-                NombreCompleto = p.NombreCompleto,
-                Direccion = p.Direccion,
-                Telefono = p.Telefono,
-                CorreoElectronico = p.CorreoElectronico,
-                FechaNacimiento = p.FechaNacimiento,
-                Edad = p.Edad,
-                Sexo = p.Sexo,
-                FechaRegistro = p.FechaRegistro
-            })
             .ToListAsync();
+
+        return pacientes.Select(MapToDto).ToList();
     }
 
     public async Task<ExpedienteCompletoDto> ObtenerExpedienteCompletoAsync(Guid id)
@@ -157,7 +135,7 @@ public class PacienteService : IPacienteService
             {
                 Id = m.Id,
                 PacienteId = m.PacienteId,
-                CitaId = m.CitaId,
+                ConsultaId = m.ConsultaId,
                 FechaMedicion = m.FechaMedicion,
                 Peso = m.Peso,
                 Estatura = m.Estatura,
@@ -178,7 +156,7 @@ public class PacienteService : IPacienteService
             {
                 Id = f.Id,
                 PacienteId = f.PacienteId,
-                CitaId = f.CitaId,
+                ConsultaId = f.ConsultaId,
                 UrlFoto = f.UrlFoto ?? string.Empty,
                 Tipo = f.Tipo,
                 FechaSubida = f.FechaSubida,
@@ -194,7 +172,7 @@ public class PacienteService : IPacienteService
             {
                 Id = d.Id,
                 PacienteId = d.PacienteId,
-                CitaId = d.CitaId,
+                ConsultaId = d.ConsultaId,
                 NombreDocumento = d.NombreDocumento,
                 UrlDocumento = d.UrlDocumento,
                 Tipo = d.Tipo,
@@ -209,7 +187,7 @@ public class PacienteService : IPacienteService
             NombreCompleto = paciente.NombreCompleto,
             CorreoElectronico = paciente.CorreoElectronico,
             Telefono = paciente.Telefono,
-            Edad = paciente.Edad,
+            Edad = CalculadoraClinica.CalcularEdad(paciente.FechaNacimiento),
             HistorialClinico = paciente.HistorialClinico == null
                 ? null
                 : new HistorialClinicoRespuestaDto
@@ -226,14 +204,18 @@ public class PacienteService : IPacienteService
         };
     }
 
-    private static int CalcularEdad(DateTime? fechaNacimiento)
+    private static PacienteRespuestaDto MapToDto(Paciente paciente) => new()
     {
-        if (!fechaNacimiento.HasValue) return 0;
-
-        var hoy = DateTime.Today;
-        var edad = hoy.Year - fechaNacimiento.Value.Year;
-        if (fechaNacimiento.Value.Date > hoy.AddYears(-edad)) edad--;
-
-        return edad;
-    }
+        Id = paciente.Id,
+        NombreCompleto = paciente.NombreCompleto,
+        Direccion = paciente.Direccion,
+        Telefono = paciente.Telefono,
+        CorreoElectronico = paciente.CorreoElectronico,
+        FechaNacimiento = paciente.FechaNacimiento,
+        Edad = CalculadoraClinica.CalcularEdad(paciente.FechaNacimiento),
+        Sexo = paciente.Sexo,
+        TituloObjetivo = paciente.TituloObjetivo,
+        PesoObjetivo = paciente.PesoObjetivo,
+        FechaRegistro = paciente.FechaRegistro
+    };
 }

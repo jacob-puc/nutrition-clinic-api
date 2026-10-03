@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
+using nutriclinica_backend.Features.Consultas.Services;
 using nutriclinica_backend.Features.ExpedienteMedia.DTOs;
 using nutriclinica_backend.Features.ExpedienteMedia.Interfaces;
 using nutriclinica_backend.Infrastructure.Persistence;
@@ -41,10 +42,12 @@ public class ExpedienteMediaService : IExpedienteMediaService
             throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {pacienteId}");
         }
 
+        await ValidadorConsultaVinculo.ValidarPertenenciaAsync(_context, dto.ConsultaId, pacienteId);
+
         var foto = new FotoSeguimiento
         {
             PacienteId = pacienteId,
-            CitaId = dto.CitaId,
+            ConsultaId = dto.ConsultaId,
             UrlFoto = dto.UrlFoto,
             Tipo = dto.Tipo,
             Notas = dto.Notas,
@@ -57,6 +60,22 @@ public class ExpedienteMediaService : IExpedienteMediaService
         return MapFotoToDto(foto);
     }
 
+    public async Task<FotoRespuestaDto> RegistrarFotoEnConsultaAsync(Guid consultaId, CrearFotoDto dto)
+    {
+        var pacienteId = await ValidadorConsultaVinculo
+            .ResolverPacienteDesdeConsultaAsync(_context, consultaId);
+
+        var dtoConVinculo = new CrearFotoDto
+        {
+            UrlFoto = dto.UrlFoto,
+            Tipo = dto.Tipo,
+            Notas = dto.Notas,
+            ConsultaId = consultaId
+        };
+
+        return await RegistrarFotoAsync(pacienteId, dtoConVinculo);
+    }
+
     public async Task<IEnumerable<FotoRespuestaDto>> ObtenerFotosPorPacienteAsync(Guid pacienteId)
     {
         return await _context.FotosSeguimiento
@@ -67,7 +86,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
             {
                 Id = f.Id,
                 PacienteId = f.PacienteId,
-                CitaId = f.CitaId,
+                ConsultaId = f.ConsultaId,
                 UrlFoto = f.UrlFoto ?? string.Empty,
                 Tipo = f.Tipo,
                 FechaSubida = f.FechaSubida,
@@ -125,10 +144,12 @@ public class ExpedienteMediaService : IExpedienteMediaService
             throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {pacienteId}");
         }
 
+        await ValidadorConsultaVinculo.ValidarPertenenciaAsync(_context, dto.ConsultaId, pacienteId);
+
         var documento = new DocumentoPaciente
         {
             PacienteId = pacienteId,
-            CitaId = dto.CitaId,
+            ConsultaId = dto.ConsultaId,
             NombreDocumento = dto.NombreDocumento,
             UrlDocumento = dto.UrlDocumento,
             Tipo = dto.Tipo,
@@ -142,6 +163,23 @@ public class ExpedienteMediaService : IExpedienteMediaService
         return MapDocumentoToDto(documento);
     }
 
+    public async Task<DocumentoRespuestaDto> RegistrarDocumentoEnConsultaAsync(Guid consultaId, CrearDocumentoDto dto)
+    {
+        var pacienteId = await ValidadorConsultaVinculo
+            .ResolverPacienteDesdeConsultaAsync(_context, consultaId);
+
+        var dtoConVinculo = new CrearDocumentoDto
+        {
+            NombreDocumento = dto.NombreDocumento,
+            UrlDocumento = dto.UrlDocumento,
+            Tipo = dto.Tipo,
+            Observaciones = dto.Observaciones,
+            ConsultaId = consultaId
+        };
+
+        return await RegistrarDocumentoAsync(pacienteId, dtoConVinculo);
+    }
+
     public async Task<IEnumerable<DocumentoRespuestaDto>> ObtenerDocumentosPorPacienteAsync(Guid pacienteId)
     {
         return await _context.DocumentosPaciente
@@ -152,7 +190,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
             {
                 Id = d.Id,
                 PacienteId = d.PacienteId,
-                CitaId = d.CitaId,
+                ConsultaId = d.ConsultaId,
                 NombreDocumento = d.NombreDocumento,
                 UrlDocumento = d.UrlDocumento,
                 Tipo = d.Tipo,
@@ -204,7 +242,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
     {
         Id = foto.Id,
         PacienteId = foto.PacienteId,
-        CitaId = foto.CitaId,
+        ConsultaId = foto.ConsultaId,
         UrlFoto = foto.UrlFoto ?? string.Empty,
         Tipo = foto.Tipo,
         FechaSubida = foto.FechaSubida,
@@ -215,7 +253,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
     {
         Id = documento.Id,
         PacienteId = documento.PacienteId,
-        CitaId = documento.CitaId,
+        ConsultaId = documento.ConsultaId,
         NombreDocumento = documento.NombreDocumento,
         UrlDocumento = documento.UrlDocumento,
         Tipo = documento.Tipo,

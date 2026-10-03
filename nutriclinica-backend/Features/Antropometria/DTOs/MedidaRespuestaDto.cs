@@ -1,10 +1,10 @@
-﻿namespace nutriclinica_backend.Features.Antropometria.DTOs;
+namespace nutriclinica_backend.Features.Antropometria.DTOs;
 
 public class MedidaRespuestaDto
 {
     public Guid Id { get; set; }
     public Guid PacienteId { get; set; }
-    public Guid? CitaId { get; set; }
+    public Guid? ConsultaId { get; set; }
     public DateTime FechaMedicion { get; set; }
     
     public decimal Peso { get; set; }

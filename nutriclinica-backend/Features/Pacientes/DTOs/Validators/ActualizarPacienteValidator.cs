@@ -19,12 +19,12 @@ public class ActualizarPacienteValidator : AbstractValidator<ActualizarPacienteD
             .Matches(@"^\+?[0-9]{7,15}$").WithMessage("El número de teléfono no tiene un formato válido.");
 
         RuleFor(x => x.FechaNacimiento)
-            .Must(f => f <= DateTime.UtcNow.Date)
+            .Must(f => f <= DateOnly.FromDateTime(DateTime.Today))
             .WithMessage("La fecha de nacimiento no puede ser futura.")
             .When(x => x.FechaNacimiento.HasValue);
 
         RuleFor(x => x.Sexo)
-            .Must(s => string.IsNullOrEmpty(s) || new[] { "M", "F", "Otro" }.Contains(s))
-            .WithMessage("El sexo debe ser 'M', 'F' u 'Otro'.");
+            .IsInEnum().WithMessage("El sexo debe ser 'M', 'F' u 'Otro'.");
+
     }
 }

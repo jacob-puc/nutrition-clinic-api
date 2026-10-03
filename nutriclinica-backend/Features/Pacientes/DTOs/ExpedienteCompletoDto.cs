@@ -10,7 +10,7 @@ public class ExpedienteCompletoDto
     public string NombreCompleto { get; set; } = string.Empty;
     public string CorreoElectronico { get; set; } = string.Empty;
     public string Telefono { get; set; } = string.Empty;
-    public int Edad { get; set; }
+    public int? Edad { get; set; }
 
     public HistorialClinicoRespuestaDto? HistorialClinico { get; set; }
 

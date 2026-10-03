@@ -1,8 +1,10 @@
 ﻿using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
+using nutriclinica_backend.Core.Utils;
 using nutriclinica_backend.Features.Antropometria.DTOs;
 using nutriclinica_backend.Features.Antropometria.Interfaces;
+using nutriclinica_backend.Features.Consultas.Services;
 using nutriclinica_backend.Infrastructure.Persistence;
 
 namespace nutriclinica_backend.Features.Antropometria.Services;
@@ -35,13 +37,15 @@ public class AntropometriaService : IAntropometriaService
             throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {pacienteId}");
         }
 
+        await ValidadorConsultaVinculo.ValidarPertenenciaAsync(_context, dto.ConsultaId, pacienteId);
+
         var medida = new MedidaAntropometrica
         {
             PacienteId = pacienteId,
-            CitaId = dto.CitaId,
+            ConsultaId = dto.ConsultaId,
             Peso = dto.Peso,
             Estatura = dto.Estatura,
-            Imc = CalcularImc(dto.Peso, dto.Estatura),
+            Imc = CalculadoraClinica.CalcularImc(dto.Peso, dto.Estatura),
             PorcentajeGrasa = dto.PorcentajeGrasa,
             PorcentajeMasaMuscular = dto.PorcentajeMasaMuscular,
             MedidaCintura = dto.MedidaCintura,
@@ -56,6 +60,27 @@ public class AntropometriaService : IAntropometriaService
         return MapToDto(medida);
     }
 
+    public async Task<MedidaRespuestaDto> RegistrarMedidaEnConsultaAsync(Guid consultaId, CrearMedidaDto dto)
+    {
+        // El paciente se deriva de la consulta: el cliente nunca lo envia.
+        var pacienteId = await ValidadorConsultaVinculo
+            .ResolverPacienteDesdeConsultaAsync(_context, consultaId);
+
+        var dtoConVinculo = new CrearMedidaDto
+        {
+            Peso = dto.Peso,
+            Estatura = dto.Estatura,
+            PorcentajeGrasa = dto.PorcentajeGrasa,
+            PorcentajeMasaMuscular = dto.PorcentajeMasaMuscular,
+            MedidaCintura = dto.MedidaCintura,
+            MedidaCadera = dto.MedidaCadera,
+            NotasObservaciones = dto.NotasObservaciones,
+            ConsultaId = consultaId
+        };
+
+        return await RegistrarMedidaAsync(pacienteId, dtoConVinculo);
+    }
+
     public async Task<IEnumerable<MedidaRespuestaDto>> ObtenerMedidasPorPacienteIdAsync(Guid pacienteId)
     {
         return await _context.MedidasAntropometricas
@@ -66,7 +91,7 @@ public class AntropometriaService : IAntropometriaService
             {
                 Id = m.Id,
                 PacienteId = m.PacienteId,
-                CitaId = m.CitaId,
+                ConsultaId = m.ConsultaId,
                 FechaMedicion = m.FechaMedicion,
                 Peso = m.Peso,
                 Estatura = m.Estatura,
@@ -105,7 +130,7 @@ public class AntropometriaService : IAntropometriaService
         medida.MedidaCintura = dto.MedidaCintura;
         medida.MedidaCadera = dto.MedidaCadera;
         medida.NotasObservaciones = dto.NotasObservaciones;
-        medida.Imc = CalcularImc(dto.Peso, dto.Estatura);
+        medida.Imc = CalculadoraClinica.CalcularImc(dto.Peso, dto.Estatura);
 
         await _context.SaveChangesAsync();
 
@@ -126,7 +151,7 @@ public class AntropometriaService : IAntropometriaService
     {
         Id = medida.Id,
         PacienteId = medida.PacienteId,
-        CitaId = medida.CitaId,
+        ConsultaId = medida.ConsultaId,
         FechaMedicion = medida.FechaMedicion,
         Peso = medida.Peso,
         Estatura = medida.Estatura,
@@ -137,12 +162,4 @@ public class AntropometriaService : IAntropometriaService
         MedidaCadera = medida.MedidaCadera,
         NotasObservaciones = medida.NotasObservaciones
     };
-
-    private static decimal CalcularImc(decimal pesoKg, decimal estaturaCm)
-    {
-        if (estaturaCm <= 0) return 0m;
-
-        var estaturaMetros = estaturaCm / 100m;
-        return Math.Round(pesoKg / (estaturaMetros * estaturaMetros), 2);
-    }
 }

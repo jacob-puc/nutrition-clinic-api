@@ -21,5 +21,13 @@ public class CrearMedidaValidator : AbstractValidator<CrearMedidaDto>
         RuleFor(x => x.PorcentajeMasaMuscular)
             .InclusiveBetween(0, 100).When(x => x.PorcentajeMasaMuscular.HasValue)
             .WithMessage("El porcentaje de masa muscular debe estar entre 0% y 100%.");
+
+        RuleFor(x => x.MedidaCintura)
+            .InclusiveBetween(1, 300).When(x => x.MedidaCintura.HasValue)
+            .WithMessage("La medida de cintura debe estar entre 1 cm y 300 cm.");
+
+        RuleFor(x => x.MedidaCadera)
+            .InclusiveBetween(1, 300).When(x => x.MedidaCadera.HasValue)
+            .WithMessage("La medida de cadera debe estar entre 1 cm y 300 cm.");
     }
 }

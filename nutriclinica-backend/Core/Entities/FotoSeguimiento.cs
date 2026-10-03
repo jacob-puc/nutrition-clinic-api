@@ -7,7 +7,8 @@ public class FotoSeguimiento
     public Guid Id { get; set; }
     public Guid PacienteId { get; set; }
     
-    public Guid? CitaId { get; set; }
+    public Guid? ConsultaId { get; set; }
+    public virtual Consulta? Consulta { get; set; }
     public virtual Paciente Paciente { get; set; } = null!;
     
     public string? UrlFoto { get; set; }

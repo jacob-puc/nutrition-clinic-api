@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+**/.vscode/
+**/*.user
+**/*.suo
+**/TestResults/
+.git/
+.gitignore
+**/appsettings.Local.json
+**/*.http

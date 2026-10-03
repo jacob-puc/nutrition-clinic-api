@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using nutriclinica_backend.Core.Exceptions;
 using nutriclinica_backend.Shared;
 
 namespace nutriclinica_backend.Infrastructure.Middlewares;
@@ -31,7 +32,13 @@ public class GlobalExceptionMiddleware
         {
             await EscribirErrorAsync(context, StatusCodes.Status400BadRequest, "VALIDACION",
                 "Se encontraron errores de validación",
-                ex.Errors.Select(e => e.ErrorMessage).ToList());
+                ex.Errors
+                    .Select(e => new ErrorDetalleDto { Campo = e.PropertyName, Mensaje = e.ErrorMessage })
+                    .ToList());
+        }
+        catch (ConflictException ex)
+        {
+            await EscribirErrorAsync(context, StatusCodes.Status409Conflict, "CONFLICTO", ex.Message);
         }
         catch (DbUpdateException ex)
         {
@@ -52,7 +59,7 @@ public class GlobalExceptionMiddleware
         int statusCode,
         string codigo,
         string mensaje,
-        List<string>? errores = null)
+        List<ErrorDetalleDto>? errores = null)
     {
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";

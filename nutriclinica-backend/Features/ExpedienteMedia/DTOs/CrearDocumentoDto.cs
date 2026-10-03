@@ -1,10 +1,10 @@
-﻿using nutriclinica_backend.Core.Enums;
+using nutriclinica_backend.Core.Enums;
 
 namespace nutriclinica_backend.Features.ExpedienteMedia.DTOs;
 
 public class CrearDocumentoDto
 {
-    public Guid? CitaId { get; set; }
+    public Guid? ConsultaId { get; set; }
     public string NombreDocumento { get; set; } = string.Empty;
     public string UrlDocumento { get; set; } = string.Empty;
     public TipoDocumento Tipo { get; set; } = TipoDocumento.AnalisisLaboratorio;

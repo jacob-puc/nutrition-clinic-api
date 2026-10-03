@@ -22,13 +22,104 @@ namespace nutriclinica_backend.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("nutriclinica_backend.Core.Entities.DocumentoPaciente", b =>
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Cita", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("FechaCancelacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaFin")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaInicio")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("MotivoCancelacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("NutricionistaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PacienteId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FechaInicio");
+
+                    b.HasIndex("NutricionistaId");
+
+                    b.HasIndex("PacienteId", "FechaInicio");
+
+                    b.ToTable("Citas");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Consulta", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("CitaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaFin")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaInicio")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NotasClinicas")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("NutricionistaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PacienteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TipoConsulta")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CitaId")
+                        .IsUnique();
+
+                    b.HasIndex("NutricionistaId");
+
+                    b.HasIndex("PacienteId", "FechaInicio");
+
+                    b.ToTable("Consultas");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.DocumentoPaciente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ConsultaId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("FechaSubida")
@@ -54,6 +145,8 @@ namespace nutriclinica_backend.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ConsultaId");
+
                     b.HasIndex("PacienteId");
 
                     b.ToTable("DocumentosPaciente");
@@ -65,7 +158,7 @@ namespace nutriclinica_backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("CitaId")
+                    b.Property<Guid?>("ConsultaId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("FechaSubida")
@@ -85,6 +178,8 @@ namespace nutriclinica_backend.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ConsultaId");
 
                     b.HasIndex("PacienteId");
 
@@ -126,7 +221,7 @@ namespace nutriclinica_backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("CitaId")
+                    b.Property<Guid?>("ConsultaId")
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Estatura")
@@ -168,9 +263,54 @@ namespace nutriclinica_backend.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ConsultaId");
+
                     b.HasIndex("PacienteId");
 
                     b.ToTable("MedidasAntropometricas");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Nutricionista", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorreoElectronico")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Especialidad")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NombreCompleto")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NumeroColegiatura")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Telefono")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorreoElectronico")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = true");
+
+                    b.HasIndex("NumeroColegiatura")
+                        .IsUnique();
+
+                    b.ToTable("Nutricionistas");
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.Paciente", b =>
@@ -186,11 +326,8 @@ namespace nutriclinica_backend.Migrations
                     b.Property<string>("Direccion")
                         .HasColumnType("text");
 
-                    b.Property<int>("Edad")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("FechaNacimiento")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly?>("FechaNacimiento")
+                        .HasColumnType("date");
 
                     b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("timestamp with time zone");
@@ -202,6 +339,9 @@ namespace nutriclinica_backend.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<decimal?>("PesoObjetivo")
+                        .HasColumnType("numeric");
+
                     b.Property<string>("Sexo")
                         .IsRequired()
                         .HasColumnType("text");
@@ -210,29 +350,94 @@ namespace nutriclinica_backend.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("TituloObjetivo")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
-                    b.ToTable("Pacientes");
+                    b.ToTable("Pacientes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Pacientes_Sexo", "\"Sexo\" IN ('M','F','Otro')");
+                        });
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Cita", b =>
+                {
+                    b.HasOne("nutriclinica_backend.Core.Entities.Nutricionista", "Nutricionista")
+                        .WithMany("Citas")
+                        .HasForeignKey("NutricionistaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("nutriclinica_backend.Core.Entities.Paciente", "Paciente")
+                        .WithMany("Citas")
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Nutricionista");
+
+                    b.Navigation("Paciente");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Consulta", b =>
+                {
+                    b.HasOne("nutriclinica_backend.Core.Entities.Cita", "Cita")
+                        .WithOne("Consulta")
+                        .HasForeignKey("nutriclinica_backend.Core.Entities.Consulta", "CitaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("nutriclinica_backend.Core.Entities.Nutricionista", "Nutricionista")
+                        .WithMany("Consultas")
+                        .HasForeignKey("NutricionistaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("nutriclinica_backend.Core.Entities.Paciente", "Paciente")
+                        .WithMany("Consultas")
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cita");
+
+                    b.Navigation("Nutricionista");
+
+                    b.Navigation("Paciente");
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.DocumentoPaciente", b =>
                 {
+                    b.HasOne("nutriclinica_backend.Core.Entities.Consulta", "Consulta")
+                        .WithMany()
+                        .HasForeignKey("ConsultaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("nutriclinica_backend.Core.Entities.Paciente", "Paciente")
                         .WithMany()
                         .HasForeignKey("PacienteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Consulta");
 
                     b.Navigation("Paciente");
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.FotoSeguimiento", b =>
                 {
+                    b.HasOne("nutriclinica_backend.Core.Entities.Consulta", "Consulta")
+                        .WithMany()
+                        .HasForeignKey("ConsultaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("nutriclinica_backend.Core.Entities.Paciente", "Paciente")
                         .WithMany()
                         .HasForeignKey("PacienteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Consulta");
 
                     b.Navigation("Paciente");
                 });
@@ -250,17 +455,40 @@ namespace nutriclinica_backend.Migrations
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.MedidaAntropometrica", b =>
                 {
+                    b.HasOne("nutriclinica_backend.Core.Entities.Consulta", "Consulta")
+                        .WithMany()
+                        .HasForeignKey("ConsultaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("nutriclinica_backend.Core.Entities.Paciente", "Paciente")
                         .WithMany()
                         .HasForeignKey("PacienteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Consulta");
+
                     b.Navigation("Paciente");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Cita", b =>
+                {
+                    b.Navigation("Consulta");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Nutricionista", b =>
+                {
+                    b.Navigation("Citas");
+
+                    b.Navigation("Consultas");
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.Paciente", b =>
                 {
+                    b.Navigation("Citas");
+
+                    b.Navigation("Consultas");
+
                     b.Navigation("HistorialClinico");
                 });
 #pragma warning restore 612, 618

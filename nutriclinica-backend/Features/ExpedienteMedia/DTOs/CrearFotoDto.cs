@@ -1,10 +1,10 @@
-﻿using nutriclinica_backend.Core.Enums;
+using nutriclinica_backend.Core.Enums;
 
 namespace nutriclinica_backend.Features.ExpedienteMedia.DTOs;
 
 public class CrearFotoDto
 {
-    public Guid? CitaId { get; set; }
+    public Guid? ConsultaId { get; set; }
     public string UrlFoto { get; set; } = string.Empty;
     public TipoFoto Tipo { get; set; } = TipoFoto.Frente;
     public string? Notas { get; set; }

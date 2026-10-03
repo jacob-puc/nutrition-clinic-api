@@ -46,6 +46,15 @@ public class PacientesController : ControllerBase
         return Ok(await _pacienteService.ActualizarPacienteAsync(id, dto));
     }
 
+    /// <summary>El objetivo se define en consulta, no al alta, asi que va aparte del CRUD del paciente.</summary>
+    [HttpPut("{id:guid}/objetivo")]
+    public async Task<ActionResult<PacienteRespuestaDto>> ActualizarObjetivo(
+        Guid id,
+        [FromBody] ActualizarObjetivoPacienteDto dto)
+    {
+        return Ok(await _pacienteService.ActualizarObjetivoAsync(id, dto));
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> EliminarPaciente(Guid id)
     {

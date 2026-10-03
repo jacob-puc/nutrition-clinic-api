@@ -14,10 +14,21 @@ public class ApplicationDbContext : DbContext
     public DbSet<MedidaAntropometrica> MedidasAntropometricas => Set<MedidaAntropometrica>();
     public DbSet<FotoSeguimiento> FotosSeguimiento => Set<FotoSeguimiento>();
     public DbSet<DocumentoPaciente> DocumentosPaciente => Set<DocumentoPaciente>();
+    public DbSet<Cita> Citas => Set<Cita>();
+    public DbSet<Consulta> Consultas => Set<Consulta>();
+    public DbSet<Nutricionista> Nutricionistas => Set<Nutricionista>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Paciente>(entity =>
+        {
+            entity.Property(p => p.Sexo).HasConversion<string>();
+
+            entity.ToTable("Pacientes", table =>
+                table.HasCheckConstraint("CK_Pacientes_Sexo", "\"Sexo\" IN ('M','F','Otro')"));
+        });
 
         modelBuilder.Entity<HistorialClinico>(entity =>
         {
@@ -40,7 +51,12 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(m => m.PacienteId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.Property(m => m.CitaId).IsRequired(false);
+            entity.Property(m => m.ConsultaId).IsRequired(false);
+
+            entity.HasOne(m => m.Consulta)
+                .WithMany()
+                .HasForeignKey(m => m.ConsultaId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.Property(m => m.Peso).HasPrecision(5, 2);
             entity.Property(m => m.Estatura).HasPrecision(5, 2);
@@ -61,6 +77,13 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.Property(f => f.Tipo).HasConversion<string>();
+
+            entity.Property(f => f.ConsultaId).IsRequired(false);
+
+            entity.HasOne(f => f.Consulta)
+                .WithMany()
+                .HasForeignKey(f => f.ConsultaId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<DocumentoPaciente>(entity =>
@@ -73,6 +96,78 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.Property(d => d.Tipo).HasConversion<string>();
+
+            entity.Property(d => d.ConsultaId).IsRequired(false);
+
+            entity.HasOne(d => d.Consulta)
+                .WithMany()
+                .HasForeignKey(d => d.ConsultaId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Cita>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+
+            entity.HasOne(c => c.Paciente)
+                .WithMany(p => p.Citas)
+                .HasForeignKey(c => c.PacienteId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(c => c.Nutricionista)
+                .WithMany(n => n.Citas)
+                .HasForeignKey(c => c.NutricionistaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(c => c.Estado).HasConversion<string>();
+            entity.Property(c => c.Motivo).HasMaxLength(500);
+            entity.Property(c => c.MotivoCancelacion).HasMaxLength(500);
+
+            entity.HasIndex(c => c.NutricionistaId);
+            entity.HasIndex(c => new { c.PacienteId, c.FechaInicio });
+            entity.HasIndex(c => c.FechaInicio);
+        });
+
+        modelBuilder.Entity<Consulta>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+
+            entity.HasOne(c => c.Paciente)
+                .WithMany(p => p.Consultas)
+                .HasForeignKey(c => c.PacienteId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(c => c.Cita)
+                .WithOne(cita => cita.Consulta)
+                .HasForeignKey<Consulta>(c => c.CitaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(c => c.Nutricionista)
+                .WithMany(n => n.Consultas)
+                .HasForeignKey(c => c.NutricionistaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(c => c.TipoConsulta).HasConversion<string>();
+            entity.Property(c => c.NotasClinicas).HasMaxLength(4000);
+
+            entity.HasIndex(c => c.CitaId).IsUnique();
+            entity.HasIndex(c => new { c.PacienteId, c.FechaInicio });
+            entity.HasIndex(c => c.NutricionistaId);
+        });
+
+        modelBuilder.Entity<Nutricionista>(entity =>
+        {
+            entity.HasKey(n => n.Id);
+
+            entity.Property(n => n.NombreCompleto).HasMaxLength(100);
+            entity.Property(n => n.Especialidad).HasMaxLength(100);
+
+            entity.HasIndex(n => n.CorreoElectronico)
+                .IsUnique()
+                .HasFilter("\"IsActive\" = true");
+
+            entity.HasIndex(n => n.NumeroColegiatura)
+                .IsUnique();
         });
     }
 }

@@ -1,8 +1,8 @@
-﻿namespace nutriclinica_backend.Features.Antropometria.DTOs;
+namespace nutriclinica_backend.Features.Antropometria.DTOs;
 
 public class CrearMedidaDto
 {
-    public Guid? CitaId { get; set; }
+    public Guid? ConsultaId { get; set; }
 
     public decimal Peso { get; set; }
     public decimal Estatura { get; set; }
