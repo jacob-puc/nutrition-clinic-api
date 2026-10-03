@@ -1,6 +1,32 @@
- esta @nutriclinica_backend_HostAddress = http://localhost:5036
+@nutriclinica_backend_HostAddress = http://localhost:5036
 
-GET {{nutriclinica_backend_HostAddress}}/weatherforecast/
-Accept: application/json
+### Login
+# @name login
+POST {{nutriclinica_backend_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "correoElectronico": "admin@nutriclinica.cl",
+  "contrasena": "NutriClinica2026"
+}
+
+@token = {{login.response.body.accessToken}}
+
+### Nutricionista autenticado
+# @name yo
+GET {{nutriclinica_backend_HostAddress}}/api/auth/yo
+Authorization: Bearer {{token}}
+
+### Pacientes (requiere token)
+GET {{nutriclinica_backend_HostAddress}}/api/pacientes
+Authorization: Bearer {{token}}
+
+### Refresh token
+POST {{nutriclinica_backend_HostAddress}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.refreshToken}}"
+}
 
 ###
