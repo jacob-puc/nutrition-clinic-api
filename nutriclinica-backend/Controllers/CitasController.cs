@@ -35,6 +35,7 @@ public class CitasController : ControllerBase
         var cita = await _citaService.CrearCitaAsync(dto);
         return CreatedAtAction(nameof(ObtenerCitaPorId), new { citaId = cita.Id }, cita);
     }
+    
 
     [HttpPut("{citaId:guid}")]
     public async Task<ActionResult<CitaRespuestaDto>> ActualizarCita(

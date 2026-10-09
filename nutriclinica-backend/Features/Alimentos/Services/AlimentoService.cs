@@ -5,8 +5,11 @@ using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
 using nutriclinica_backend.Core.Exceptions;
 using nutriclinica_backend.Features.Alimentos.DTOs;
+using nutriclinica_backend.Features.Alimentos.DTOs.Validators;
 using nutriclinica_backend.Features.Alimentos.Interfaces;
+using nutriclinica_backend.Features.ExpedienteMedia.DTOs.Validators;
 using nutriclinica_backend.Infrastructure.Persistence;
+using nutriclinica_backend.Infrastructure.Storage;
 
 namespace nutriclinica_backend.Features.Alimentos.Services;
 
@@ -17,18 +20,31 @@ public class AlimentoService : IAlimentoService
     private const int CaloriasPorGramoDeGrasa = 9;
     private const decimal ToleranciaCalorica = 5m;
 
+    private static readonly string[] TiposImagenPermitidos =
+    [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    ];
+
     private readonly ApplicationDbContext _context;
+    private readonly IStorageService _storageService;
+    private readonly StorageConfig _storageConfig;
     private readonly IValidator<CrearAlimentoDto> _crearAlimentoValidator;
     private readonly IValidator<ActualizarAlimentoDto> _actualizarAlimentoValidator;
     private readonly IValidator<AlimentoFiltroDto> _filtroValidator;
 
     public AlimentoService(
         ApplicationDbContext context,
+        IStorageService storageService,
+        StorageConfig storageConfig,
         IValidator<CrearAlimentoDto> crearAlimentoValidator,
         IValidator<ActualizarAlimentoDto> actualizarAlimentoValidator,
         IValidator<AlimentoFiltroDto> filtroValidator)
     {
         _context = context;
+        _storageService = storageService;
+        _storageConfig = storageConfig;
         _crearAlimentoValidator = crearAlimentoValidator;
         _actualizarAlimentoValidator = actualizarAlimentoValidator;
         _filtroValidator = filtroValidator;
@@ -152,6 +168,39 @@ public class AlimentoService : IAlimentoService
         return MapToDto(alimento);
     }
 
+    public async Task<AlimentoRespuestaDto> SubirImagenAlimentoAsync(Guid alimentoId, IFormFile imagen)
+    {
+        ValidarImagen(imagen);
+
+        var alimento = await _context.Alimentos
+            .FirstOrDefaultAsync(a => a.Id == alimentoId)
+            ?? throw new KeyNotFoundException($"No se encontró un alimento con ID: {alimentoId}");
+
+        await using var buffer = new MemoryStream();
+        await imagen.CopyToAsync(buffer);
+
+        var extension = imagen.ContentType.ToLowerInvariant() switch
+        {
+            "image/png" => ".png",
+            "image/webp" => ".webp",
+            _ => ".jpg"
+        };
+
+        var ruta = $"alimentos/{alimentoId}/{Guid.NewGuid()}{extension}";
+
+        await _storageService.SubirArchivoAsync(
+            _storageConfig.BucketMedia,
+            ruta,
+            buffer.ToArray(),
+            imagen.ContentType);
+
+        alimento.ImagenUrl = _storageService.GenerarUrlPublica(_storageConfig.BucketMedia, ruta);
+
+        await _context.SaveChangesAsync();
+
+        return MapToDto(alimento);
+    }
+
     public async Task EliminarAlimentoAsync(Guid alimentoId)
     {
         var alimento = await _context.Alimentos
@@ -165,6 +214,25 @@ public class AlimentoService : IAlimentoService
 
         alimento.IsActive = false;
         await _context.SaveChangesAsync();
+    }
+
+    private static void ValidarImagen(IFormFile imagen)
+    {
+        if (imagen is null || imagen.Length == 0)
+        {
+            throw new ValidationException("Debes adjuntar una imagen.");
+        }
+
+        if (!TiposImagenPermitidos.Contains(imagen.ContentType.ToLowerInvariant()))
+        {
+            throw new ValidationException("Solo se permiten imágenes JPEG, PNG o WEBP.");
+        }
+
+        if (imagen.Length > ValidacionArchivo.MaximoTamanioFotoBytes)
+        {
+            throw new ValidationException(
+                $"La imagen no puede superar {ValidacionArchivo.TextoTamanioFoto}.");
+        }
     }
 
     private async Task ValidarNombreNoDuplicadoAsync(string nombreNormalizado, Guid? alimentoExcluido)

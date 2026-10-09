@@ -9,5 +9,6 @@ public interface IAlimentoService
     Task<AlimentoRespuestaDto> ObtenerAlimentoPorIdAsync(Guid alimentoId);
     Task<IEnumerable<AlimentoRespuestaDto>> ObtenerAlimentosAsync(AlimentoFiltroDto filtro);
     Task<AlimentoRespuestaDto> RestaurarAlimentoAsync(Guid alimentoId);
+    Task<AlimentoRespuestaDto> SubirImagenAlimentoAsync(Guid alimentoId, IFormFile imagen);
     Task EliminarAlimentoAsync(Guid alimentoId);
 }

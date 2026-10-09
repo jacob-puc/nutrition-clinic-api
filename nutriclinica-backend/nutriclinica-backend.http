@@ -87,3 +87,146 @@ Content-Disposition: form-data; name="observaciones"
 
 Analisis de control
 ------Bound--
+
+###
+# =====================================================================
+#  MÓDULO DE ALIMENTOS
+#  Ejecuta estas en orden. La 1 crea un alimento y te guarda el id.
+# =====================================================================
+###
+
+### 1) Crear alimento válido (espera 201)
+# @name crearAlimento
+POST {{nutriclinica_backend_HostAddress}}/api/alimentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Pechuga de pollo a la plancha",
+  "calorias": 165,
+  "proteinas": 31,
+  "carbohidratos": 0,
+  "grasas": 3.6
+}
+
+@alimentoId = {{crearAlimento.response.body.id}}
+
+### 2) Listar todos los alimentos (espera 200 con el recién creado)
+GET {{nutriclinica_backend_HostAddress}}/api/alimentos
+Authorization: Bearer {{token}}
+
+### 3) Buscar por texto (espera 200, debe encontrar "pollo")
+GET {{nutriclinica_backend_HostAddress}}/api/alimentos?buscar=pollo
+Authorization: Bearer {{token}}
+
+### 4) Buscar sin acentos (espera 200, igual debe encontrar "pollo")
+# Prueba la normalización de nombres: busca "POLLÓ" y debe devolver lo mismo.
+GET {{nutriclinica_backend_HostAddress}}/api/alimentos?buscar=POLLÓ
+Authorization: Bearer {{token}}
+
+### 5) Ordenar por calorías descendente (espera 200)
+GET {{nutriclinica_backend_HostAddress}}/api/alimentos?ordenarPor=calorias&descendente=true
+Authorization: Bearer {{token}}
+
+### 6) Filtrar por rango de calorías (espera 200)
+GET {{nutriclinica_backend_HostAddress}}/api/alimentos?caloriasMinimas=100&caloriasMaximas=200
+Authorization: Bearer {{token}}
+
+### 7) Detalle por id (espera 200)
+GET {{nutriclinica_backend_HostAddress}}/api/alimentos/{{alimentoId}}
+Authorization: Bearer {{token}}
+
+### 8) Crear con nombre repetido (espera 409 CONFLICTO)
+POST {{nutriclinica_backend_HostAddress}}/api/alimentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "pechuga de pollo a la plancha",
+  "calorias": 165,
+  "proteinas": 31,
+  "carbohidratos": 0,
+  "grasas": 3.6
+}
+
+### 9) Crear con calorías negativas (espera 400 VALIDACION)
+POST {{nutriclinica_backend_HostAddress}}/api/alimentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Alimento inválido",
+  "calorias": -5,
+  "proteinas": 10,
+  "carbohidratos": 10,
+  "grasas": 10
+}
+
+### 10) Crear con proteínas sobre 100 g (espera 400 VALIDACION)
+POST {{nutriclinica_backend_HostAddress}}/api/alimentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Alimento imposible",
+  "calorias": 100,
+  "proteinas": 150,
+  "carbohidratos": 10,
+  "grasas": 10
+}
+
+### 11) Filtrar solo inactivos antes de borrar (espera 200 vacío)
+GET {{nutriclinica_backend_HostAddress}}/api/alimentos?buscar=pollo&soloActivos=false
+Authorization: Bearer {{token}}
+
+### 12) Borrar el alimento (espera 204)
+DELETE {{nutriclinica_backend_HostAddress}}/api/alimentos/{{alimentoId}}
+Authorization: Bearer {{token}}
+
+### 13) Ya no debe aparecer en la lista normal (espera 200 sin "pollo")
+GET {{nutriclinica_backend_HostAddress}}/api/alimentos?buscar=pollo
+Authorization: Bearer {{token}}
+
+### 14) Restaurarlo (espera 200)
+PATCH {{nutriclinica_backend_HostAddress}}/api/alimentos/{{alimentoId}}/restaurar
+Authorization: Bearer {{token}}
+
+### 15) Vuelve a aparecer (espera 200 con "pollo")
+GET {{nutriclinica_backend_HostAddress}}/api/alimentos?buscar=pollo
+Authorization: Bearer {{token}}
+
+### 16) Borrar dos veces (espera 409, ya estaba eliminado)
+DELETE {{nutriclinica_backend_HostAddress}}/api/alimentos/{{alimentoId}}
+Authorization: Bearer {{token}}
+
+###
+# =====================================================================
+#  SUBIR IMAGEN DEL ALIMENTO (opcional)
+#  Antes de ejecutar: pon una imagen JPG dentro de la carpeta
+#  nutriclinica-backend/Assets/ con el nombre "alimento.jpg"
+# =====================================================================
+###
+
+### 17) Subir imagen (espera 200 y devuelve urlImagen)
+# POST {{nutriclinica_backend_HostAddress}}/api/alimentos/{{alimentoId}}/imagen
+# Authorization: Bearer {{token}}
+# Content-Type: multipart/form-data; boundary=----Bound
+#
+# ------Bound
+# Content-Disposition: form-data; name="imagen"; filename="alimento.jpg"
+# Content-Type: image/jpeg
+#
+# < ./Assets/alimento.jpg
+# ------Bound--
+
+### 18) Subir imagen con tipo no permitido (espera 400)
+# POST {{nutriclinica_backend_HostAddress}}/api/alimentos/{{alimentoId}}/imagen
+# Authorization: Bearer {{token}}
+# Content-Type: multipart/form-data; boundary=----Bound
+#
+# ------Bound
+# Content-Disposition: form-data; name="imagen"; filename="nota.txt"
+# Content-Type: text/plain
+#
+# < ./Assets/nota.txt
+# ------Bound--
