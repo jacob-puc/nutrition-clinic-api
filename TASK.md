@@ -39,16 +39,22 @@
 
 ### Upload de Archivos
 - [x] Cliente HTTP directo a la REST API de Supabase Storage (paquete NuGet descartado por fallo de reflexión)
-- [x] `SupabaseStorageService`: subir y eliminar archivos con `x-upsert`
+- [x] `SupabaseStorageService`: subir, eliminar, URL pública y URL firmada (`x-upsert`)
 - [x] `IStorageService` + `StorageConfig` (opcional: no rompe el deploy actual)
 - [x] `POST /api/pacientes/{id}/fotos/subir` y `POST /api/pacientes/{id}/documentos/subir` (`[FromForm]`)
-- [x] Validación de tipo MIME y tamaño (máx. 10 MB)
+- [x] **Dos buckets**: `nutriclinica-media` (público, imágenes de paciente y de alimentos, máx. 5 MB) y `nutriclinica-docs` (privado, máx. 10 MB)
+- [x] Validación de tipo MIME y tamaño
 - [x] Ruta en Storage: `{pacienteId}/fotos|documentos/{Guid}.{ext}`
-- [x] Reutiliza `RegistrarFotoAsync` / `RegistrarDocumentoAsync` (sin migración de BD)
+- [x] Fotos guardan la URL pública; documentos guardan la **ruta** y la API devuelve una **URL firmada** de 1 h
+- [x] Sin migración de BD (las entidades ya guardan `UrlFoto` / `UrlDocumento`)
 - [x] `StorageNoConfiguradoException` → 503 con mensaje claro
-- [x] `[RequestSizeLimit(10MB)]` en los dos endpoints
+- [x] `[RequestSizeLimit]` por endpoint (5 MB fotos, 10 MB documentos)
 - [x] Pruebas manuales en `utriclinica-backend.http`
-- [ ] **Bloqueado**: configurar `Supabase__StorageKey` (service role key) y crear el bucket `nutriclinica-storage`
+- [x] Verificación end-to-end local: subida real a ambos buckets, descarga 200, límite 5 MB → 400
+- [ ] Al eliminar un registro **no se borra el archivo** del bucket (queda huérfano)
+- [ ] **Bloqueado**: definir `Supabase__StorageKey` en Render (service role key)
+
+> **⚠️ No hacer `git push`** hasta que el usuario lo indique. Solo commit local.
 
 ---
 
@@ -86,6 +92,10 @@
 
 ## 📝 Notas
 
+- **⚠️ Flujo de git**: solo hacer `commit` local. **NO hacer `push`** hasta que el usuario lo indique.
+- **Supabase Storage**: dos buckets —
+  `nutriclinica-media` (público, imágenes, 5 MB) y `nutriclinica-docs` (privado, documentos, 10 MB).
+  La key `service_role` va **solo** en user-secrets / variables de entorno, nunca en `appsettings.json`.
 - **Credenciales admin**: `admin@nutriclinica.cl` / `NutriClinica2026` (cambiar en producción)
 - **API Render**: https://nutrition-clinic-api.onrender.com
 - **Web local**: `npm run dev` en `nutriclinica-web` (puerto 5173)

@@ -9,8 +9,8 @@ public class SubirDocumentoValidator : AbstractValidator<SubirDocumentoDto>
         RuleFor(x => x.Archivo)
             .NotNull().WithMessage("Debes adjuntar un documento.")
             .Must(archivo => archivo!.Length > 0).WithMessage("El archivo está vacío.")
-            .Must(archivo => archivo!.Length <= ValidacionArchivo.MaximoTamanioBytes)
-            .WithMessage($"El documento no puede superar {ValidacionArchivo.TamanioEnMegabytes}.")
+            .Must(archivo => archivo!.Length <= ValidacionArchivo.MaximoTamanioDocumentoBytes)
+            .WithMessage($"El documento no puede superar {ValidacionArchivo.TextoTamanioDocumento}.")
             .Must(archivo => ValidacionArchivo.TiposDocumento.Contains(archivo!.ContentType.ToLower()))
             .WithMessage("Solo se admiten PDF, imágenes JPEG/PNG y documentos Word (DOC o DOCX).");
 

@@ -13,6 +13,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
 {
     private readonly ApplicationDbContext _context;
     private readonly IStorageService _storageService;
+    private readonly StorageConfig _storageConfig;
     private readonly IValidator<CrearFotoDto> _crearFotoValidator;
     private readonly IValidator<ActualizarFotoDto> _actualizarFotoValidator;
     private readonly IValidator<CrearDocumentoDto> _crearDocumentoValidator;
@@ -23,6 +24,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
     public ExpedienteMediaService(
         ApplicationDbContext context,
         IStorageService storageService,
+        StorageConfig storageConfig,
         IValidator<CrearFotoDto> crearFotoValidator,
         IValidator<ActualizarFotoDto> actualizarFotoValidator,
         IValidator<CrearDocumentoDto> crearDocumentoValidator,
@@ -32,6 +34,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
     {
         _context = context;
         _storageService = storageService;
+        _storageConfig = storageConfig;
         _crearFotoValidator = crearFotoValidator;
         _actualizarFotoValidator = actualizarFotoValidator;
         _crearDocumentoValidator = crearDocumentoValidator;
@@ -75,7 +78,8 @@ public class ExpedienteMediaService : IExpedienteMediaService
         await _subirFotoValidator.ValidateAndThrowAsync(dto);
         await ValidarPertenenciaPacienteAsync(pacienteId, dto.ConsultaId);
 
-        var url = await SubirContenidoAsync(pacienteId, "fotos", dto.Archivo);
+        var ruta = await SubirContenidoAsync(pacienteId, "fotos", _storageConfig.BucketMedia, dto.Archivo);
+        var url = _storageService.GenerarUrlPublica(_storageConfig.BucketMedia, ruta);
 
         return await RegistrarFotoAsync(pacienteId, new CrearFotoDto
         {
@@ -161,32 +165,9 @@ public class ExpedienteMediaService : IExpedienteMediaService
     public async Task<DocumentoRespuestaDto> RegistrarDocumentoAsync(Guid pacienteId, CrearDocumentoDto dto)
     {
         await _crearDocumentoValidator.ValidateAndThrowAsync(dto);
+        await ValidarPertenenciaPacienteAsync(pacienteId, dto.ConsultaId);
 
-        var pacienteExiste = await _context.Pacientes
-            .AnyAsync(p => p.Id == pacienteId && p.IsActive);
-
-        if (!pacienteExiste)
-        {
-            throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {pacienteId}");
-        }
-
-        await ValidadorConsultaVinculo.ValidarPertenenciaAsync(_context, dto.ConsultaId, pacienteId);
-
-        var documento = new DocumentoPaciente
-        {
-            PacienteId = pacienteId,
-            ConsultaId = dto.ConsultaId,
-            NombreDocumento = dto.NombreDocumento,
-            UrlDocumento = dto.UrlDocumento,
-            Tipo = dto.Tipo,
-            Observaciones = dto.Observaciones,
-            FechaSubida = DateTime.UtcNow
-        };
-
-        _context.DocumentosPaciente.Add(documento);
-        await _context.SaveChangesAsync();
-
-        return MapDocumentoToDto(documento);
+        return await CrearDocumentoAsync(pacienteId, dto);
     }
 
     public async Task<DocumentoRespuestaDto> SubirDocumentoAsync(Guid pacienteId, SubirDocumentoDto dto)
@@ -194,13 +175,13 @@ public class ExpedienteMediaService : IExpedienteMediaService
         await _subirDocumentoValidator.ValidateAndThrowAsync(dto);
         await ValidarPertenenciaPacienteAsync(pacienteId, dto.ConsultaId);
 
-        var url = await SubirContenidoAsync(pacienteId, "documentos", dto.Archivo);
+        var ruta = await SubirContenidoAsync(pacienteId, "documentos", _storageConfig.BucketDocumentos, dto.Archivo);
 
-        return await RegistrarDocumentoAsync(pacienteId, new CrearDocumentoDto
+        return await CrearDocumentoAsync(pacienteId, new CrearDocumentoDto
         {
             ConsultaId = dto.ConsultaId,
             NombreDocumento = dto.Archivo.FileName,
-            UrlDocumento = url,
+            UrlDocumento = ruta,
             Tipo = dto.Tipo,
             Observaciones = dto.Observaciones
         });
@@ -225,22 +206,13 @@ public class ExpedienteMediaService : IExpedienteMediaService
 
     public async Task<IEnumerable<DocumentoRespuestaDto>> ObtenerDocumentosPorPacienteAsync(Guid pacienteId)
     {
-        return await _context.DocumentosPaciente
+        var documentos = await _context.DocumentosPaciente
             .AsNoTracking()
             .Where(d => d.PacienteId == pacienteId)
             .OrderByDescending(d => d.FechaSubida)
-            .Select(d => new DocumentoRespuestaDto
-            {
-                Id = d.Id,
-                PacienteId = d.PacienteId,
-                ConsultaId = d.ConsultaId,
-                NombreDocumento = d.NombreDocumento,
-                UrlDocumento = d.UrlDocumento,
-                Tipo = d.Tipo,
-                FechaSubida = d.FechaSubida,
-                Observaciones = d.Observaciones
-            })
             .ToListAsync();
+
+        return await Task.WhenAll(documentos.Select(MapDocumentoToAsync));
     }
 
     public async Task<DocumentoRespuestaDto> ObtenerDocumentoPorIdAsync(Guid pacienteId, Guid documentoId)
@@ -250,7 +222,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
             .FirstOrDefaultAsync(d => d.Id == documentoId && d.PacienteId == pacienteId)
             ?? throw new KeyNotFoundException("No se encontró el documento del paciente");
 
-        return MapDocumentoToDto(documento);
+        return await MapDocumentoToAsync(documento);
     }
 
     public async Task<DocumentoRespuestaDto> ActualizarDocumentoAsync(Guid pacienteId, Guid documentoId, ActualizarDocumentoDto dto)
@@ -268,7 +240,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
 
         await _context.SaveChangesAsync();
 
-        return MapDocumentoToDto(documento);
+        return await MapDocumentoToAsync(documento);
     }
 
     public async Task EliminarDocumentoAsync(Guid pacienteId, Guid documentoId)
@@ -279,6 +251,25 @@ public class ExpedienteMediaService : IExpedienteMediaService
 
         _context.DocumentosPaciente.Remove(documento);
         await _context.SaveChangesAsync();
+    }
+
+    private async Task<DocumentoRespuestaDto> CrearDocumentoAsync(Guid pacienteId, CrearDocumentoDto dto)
+    {
+        var documento = new DocumentoPaciente
+        {
+            PacienteId = pacienteId,
+            ConsultaId = dto.ConsultaId,
+            NombreDocumento = dto.NombreDocumento,
+            UrlDocumento = dto.UrlDocumento,
+            Tipo = dto.Tipo,
+            Observaciones = dto.Observaciones,
+            FechaSubida = DateTime.UtcNow
+        };
+
+        _context.DocumentosPaciente.Add(documento);
+        await _context.SaveChangesAsync();
+
+        return await MapDocumentoToAsync(documento);
     }
 
     private async Task ValidarPertenenciaPacienteAsync(Guid pacienteId, Guid? consultaId)
@@ -294,14 +285,14 @@ public class ExpedienteMediaService : IExpedienteMediaService
         await ValidadorConsultaVinculo.ValidarPertenenciaAsync(_context, consultaId, pacienteId);
     }
 
-    private async Task<string> SubirContenidoAsync(Guid pacienteId, string tipoRuta, IFormFile archivo)
+    private async Task<string> SubirContenidoAsync(Guid pacienteId, string tipoRuta, string bucket, IFormFile archivo)
     {
         await using var buffer = new MemoryStream();
         await archivo.CopyToAsync(buffer);
 
         var ruta = $"{pacienteId}/{tipoRuta}/{Guid.NewGuid()}{ExtensionDesdeContentType(archivo.ContentType)}";
 
-        return await _storageService.SubirArchivoAsync(ruta, buffer.ToArray(), archivo.ContentType);
+        return await _storageService.SubirArchivoAsync(bucket, ruta, buffer.ToArray(), archivo.ContentType);
     }
 
     private static string ExtensionDesdeContentType(string contentType) => contentType.ToLower() switch
@@ -315,6 +306,22 @@ public class ExpedienteMediaService : IExpedienteMediaService
         _ => ".bin"
     };
 
+    private async Task<string> ResolverUrlDocumentoAsync(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+        {
+            return string.Empty;
+        }
+
+        if (valor.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || valor.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return valor;
+        }
+
+        return await _storageService.GenerarUrlFirmadaAsync(_storageConfig.BucketDocumentos, valor);
+    }
+
     private static FotoRespuestaDto MapFotoToDto(FotoSeguimiento foto) => new()
     {
         Id = foto.Id,
@@ -326,13 +333,13 @@ public class ExpedienteMediaService : IExpedienteMediaService
         Notas = foto.Notas
     };
 
-    private static DocumentoRespuestaDto MapDocumentoToDto(DocumentoPaciente documento) => new()
+    private async Task<DocumentoRespuestaDto> MapDocumentoToAsync(DocumentoPaciente documento) => new()
     {
         Id = documento.Id,
         PacienteId = documento.PacienteId,
         ConsultaId = documento.ConsultaId,
         NombreDocumento = documento.NombreDocumento,
-        UrlDocumento = documento.UrlDocumento,
+        UrlDocumento = await ResolverUrlDocumentoAsync(documento.UrlDocumento),
         Tipo = documento.Tipo,
         FechaSubida = documento.FechaSubida,
         Observaciones = documento.Observaciones

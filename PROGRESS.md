@@ -34,15 +34,24 @@
 - **Almacenamiento**: Supabase Storage, consumido por su REST API directa
   (el cliente NuGet `Supabase` fue descartado: fallaba en reflexión por dependencias
   `Supabase.Core` / `Gotrue` / `Postgrest`)
+- **Dos buckets**:
+
+  | Bucket | Contenido | Acceso | Tamaño máx. | MIME |
+  |---|---|---|---|---|
+  | `nutriclinica-media` | Imágenes de pacientes y de alimentos (módulo futuro) | público | 5 MB | jpeg, png, webp |
+  | `nutriclinica-docs` | Documentos del paciente | **privado** | 10 MB | pdf, jpeg, png, doc, docx |
+
 - **Endpoints**: `POST /api/pacientes/{id}/fotos/subir`, `POST /api/pacientes/{id}/documentos/subir`
-  (multipart/form-data, `[RequestSizeLimit(10MB)]`)
-- **Validación**: MIME (JPEG/PNG/WEBP para fotos; PDF/JPEG/PNG/DOC/DOCX para documentos), máx. 10 MB
-- **Ruta en Storage**: `{pacienteId}/fotos|documentos/{Guid}.{ext}` → URL pública devuelta al cliente
+  (multipart/form-data, `[RequestSizeLimit]` por endpoint)
+- **URLs**: las fotos guardan la **URL pública**; los documentos guardan la **ruta** en BD y la API
+  devuelve una **URL firmada** de 1 hora en cada lectura
+- **Ruta en Storage**: `{pacienteId}/fotos|documentos/{Guid}.{ext}`
 - **Sin migración de BD**: las entidades ya guardan `UrlFoto` / `UrlDocumento`
 - **Configuración opcional**: si faltan las credenciales, el resto de la API sigue funcionando y
   el endpoint responde `503 STORAGE_NO_CONFIGURADO` con mensaje claro
-- **Variables de entorno**: `Supabase__Url` (pre-llenada en `appsettings.json`), `Supabase__StorageKey`
-  (service role key, secreta), `Supabase__Bucket` (default `nutriclinica-storage`)
+- **Variables de entorno**: `Supabase__Url` (pre-llenada), `Supabase__StorageKey` (service role key,
+  **secreta** — solo user-secrets / env vars), `Supabase__BucketMedia`, `Supabase__BucketDocumentos`
+- **Verificado end-to-end**: subida real a ambos buckets y descarga HTTP 200; archivo de 6 MB → 400
 
 ### Autenticación
 - **JWT HS256**: access token 1h, refresh token 7 días (opaco)
@@ -91,11 +100,14 @@
 
 ## Próximos pasos prioritarios (Backend)
 
-1. **Configurar Supabase Storage** → crear bucket `nutriclinica-storage` (público) y definir `Supabase__StorageKey`
-2. **Paginación** en Citas y Consultas (ya hay DTOs, falta implementar)
-3. **Tests** (xUnit + Testcontainers)
-4. **Web a producción** → S3 + CloudFront + dominio
-5. **CI/CD** GitHub Actions (build + deploy automático a Render)
+1. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
+2. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)
+3. **Paginación** en Citas y Consultas (ya hay DTOs, falta implementar)
+4. **Tests** (xUnit + Testcontainers)
+5. **Web a producción** → S3 + CloudFront + dominio
+6. **CI/CD** GitHub Actions (build + deploy automático a Render)
+
+> **⚠️ Git**: solo `commit` local. **No hacer `push`** hasta que el usuario lo indique.
 
 ---
 

@@ -1,5 +1,4 @@
 using FluentValidation;
-using nutriclinica_backend.Core.Enums;
 
 namespace nutriclinica_backend.Features.ExpedienteMedia.DTOs.Validators;
 
@@ -10,8 +9,8 @@ public class SubirFotoValidator : AbstractValidator<SubirFotoDto>
         RuleFor(x => x.Archivo)
             .NotNull().WithMessage("Debes adjuntar un archivo de imagen.")
             .Must(archivo => archivo!.Length > 0).WithMessage("El archivo está vacío.")
-            .Must(archivo => archivo!.Length <= ValidacionArchivo.MaximoTamanioBytes)
-            .WithMessage($"La imagen no puede superar {ValidacionArchivo.TamanioEnMegabytes}.")
+            .Must(archivo => archivo!.Length <= ValidacionArchivo.MaximoTamanioFotoBytes)
+            .WithMessage($"La imagen no puede superar {ValidacionArchivo.TextoTamanioFoto}.")
             .Must(archivo => ValidacionArchivo.TiposFoto.Contains(archivo!.ContentType.ToLower()))
             .WithMessage("Solo se permiten imágenes JPEG, PNG o WEBP.");
 

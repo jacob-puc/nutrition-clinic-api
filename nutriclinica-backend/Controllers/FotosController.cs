@@ -37,7 +37,7 @@ public class FotosController : ControllerBase
     }
 
     [HttpPost("subir")]
-    [RequestSizeLimit(10 * 1024 * 1024)]
+    [RequestSizeLimit(5 * 1024 * 1024)]
     public async Task<ActionResult<FotoRespuestaDto>> SubirFoto(Guid pacienteId, [FromForm] SubirFotoDto dto)
     {
         var foto = await _mediaService.SubirFotoAsync(pacienteId, dto);

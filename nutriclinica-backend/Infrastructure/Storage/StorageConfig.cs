@@ -8,7 +8,9 @@ public class StorageConfig
 
     public string Url { get; set; } = string.Empty;
     public string StorageKey { get; set; } = string.Empty;
-    public string Bucket { get; set; } = "expediente";
+
+    public string BucketMedia { get; set; } = "nutriclinica-media";
+    public string BucketDocumentos { get; set; } = "nutriclinica-docs";
 
     public void ValidarParaUso()
     {
