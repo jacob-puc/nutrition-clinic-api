@@ -5,29 +5,39 @@ using nutriclinica_backend.Features.Consultas.Services;
 using nutriclinica_backend.Features.ExpedienteMedia.DTOs;
 using nutriclinica_backend.Features.ExpedienteMedia.Interfaces;
 using nutriclinica_backend.Infrastructure.Persistence;
+using nutriclinica_backend.Infrastructure.Storage;
 
 namespace nutriclinica_backend.Features.ExpedienteMedia.Services;
 
 public class ExpedienteMediaService : IExpedienteMediaService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IStorageService _storageService;
     private readonly IValidator<CrearFotoDto> _crearFotoValidator;
     private readonly IValidator<ActualizarFotoDto> _actualizarFotoValidator;
     private readonly IValidator<CrearDocumentoDto> _crearDocumentoValidator;
     private readonly IValidator<ActualizarDocumentoDto> _actualizarDocumentoValidator;
+    private readonly IValidator<SubirFotoDto> _subirFotoValidator;
+    private readonly IValidator<SubirDocumentoDto> _subirDocumentoValidator;
 
     public ExpedienteMediaService(
         ApplicationDbContext context,
+        IStorageService storageService,
         IValidator<CrearFotoDto> crearFotoValidator,
         IValidator<ActualizarFotoDto> actualizarFotoValidator,
         IValidator<CrearDocumentoDto> crearDocumentoValidator,
-        IValidator<ActualizarDocumentoDto> actualizarDocumentoValidator)
+        IValidator<ActualizarDocumentoDto> actualizarDocumentoValidator,
+        IValidator<SubirFotoDto> subirFotoValidator,
+        IValidator<SubirDocumentoDto> subirDocumentoValidator)
     {
         _context = context;
+        _storageService = storageService;
         _crearFotoValidator = crearFotoValidator;
         _actualizarFotoValidator = actualizarFotoValidator;
         _crearDocumentoValidator = crearDocumentoValidator;
         _actualizarDocumentoValidator = actualizarDocumentoValidator;
+        _subirFotoValidator = subirFotoValidator;
+        _subirDocumentoValidator = subirDocumentoValidator;
     }
 
     public async Task<FotoRespuestaDto> RegistrarFotoAsync(Guid pacienteId, CrearFotoDto dto)
@@ -58,6 +68,22 @@ public class ExpedienteMediaService : IExpedienteMediaService
         await _context.SaveChangesAsync();
 
         return MapFotoToDto(foto);
+    }
+
+    public async Task<FotoRespuestaDto> SubirFotoAsync(Guid pacienteId, SubirFotoDto dto)
+    {
+        await _subirFotoValidator.ValidateAndThrowAsync(dto);
+        await ValidarPertenenciaPacienteAsync(pacienteId, dto.ConsultaId);
+
+        var url = await SubirContenidoAsync(pacienteId, "fotos", dto.Archivo);
+
+        return await RegistrarFotoAsync(pacienteId, new CrearFotoDto
+        {
+            ConsultaId = dto.ConsultaId,
+            UrlFoto = url,
+            Tipo = dto.Tipo,
+            Notas = dto.Notas
+        });
     }
 
     public async Task<FotoRespuestaDto> RegistrarFotoEnConsultaAsync(Guid consultaId, CrearFotoDto dto)
@@ -163,6 +189,23 @@ public class ExpedienteMediaService : IExpedienteMediaService
         return MapDocumentoToDto(documento);
     }
 
+    public async Task<DocumentoRespuestaDto> SubirDocumentoAsync(Guid pacienteId, SubirDocumentoDto dto)
+    {
+        await _subirDocumentoValidator.ValidateAndThrowAsync(dto);
+        await ValidarPertenenciaPacienteAsync(pacienteId, dto.ConsultaId);
+
+        var url = await SubirContenidoAsync(pacienteId, "documentos", dto.Archivo);
+
+        return await RegistrarDocumentoAsync(pacienteId, new CrearDocumentoDto
+        {
+            ConsultaId = dto.ConsultaId,
+            NombreDocumento = dto.Archivo.FileName,
+            UrlDocumento = url,
+            Tipo = dto.Tipo,
+            Observaciones = dto.Observaciones
+        });
+    }
+
     public async Task<DocumentoRespuestaDto> RegistrarDocumentoEnConsultaAsync(Guid consultaId, CrearDocumentoDto dto)
     {
         var pacienteId = await ValidadorConsultaVinculo
@@ -237,6 +280,40 @@ public class ExpedienteMediaService : IExpedienteMediaService
         _context.DocumentosPaciente.Remove(documento);
         await _context.SaveChangesAsync();
     }
+
+    private async Task ValidarPertenenciaPacienteAsync(Guid pacienteId, Guid? consultaId)
+    {
+        var pacienteExiste = await _context.Pacientes
+            .AnyAsync(p => p.Id == pacienteId && p.IsActive);
+
+        if (!pacienteExiste)
+        {
+            throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {pacienteId}");
+        }
+
+        await ValidadorConsultaVinculo.ValidarPertenenciaAsync(_context, consultaId, pacienteId);
+    }
+
+    private async Task<string> SubirContenidoAsync(Guid pacienteId, string tipoRuta, IFormFile archivo)
+    {
+        await using var buffer = new MemoryStream();
+        await archivo.CopyToAsync(buffer);
+
+        var ruta = $"{pacienteId}/{tipoRuta}/{Guid.NewGuid()}{ExtensionDesdeContentType(archivo.ContentType)}";
+
+        return await _storageService.SubirArchivoAsync(ruta, buffer.ToArray(), archivo.ContentType);
+    }
+
+    private static string ExtensionDesdeContentType(string contentType) => contentType.ToLower() switch
+    {
+        "image/jpeg" => ".jpg",
+        "image/png" => ".png",
+        "image/webp" => ".webp",
+        "application/pdf" => ".pdf",
+        "application/msword" => ".doc",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => ".docx",
+        _ => ".bin"
+    };
 
     private static FotoRespuestaDto MapFotoToDto(FotoSeguimiento foto) => new()
     {

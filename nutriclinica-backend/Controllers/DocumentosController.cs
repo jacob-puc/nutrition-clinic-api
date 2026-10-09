@@ -36,6 +36,17 @@ public class DocumentosController : ControllerBase
         return CreatedAtAction(nameof(ObtenerDocumentoPorId), new { pacienteId, documentoId = documento.Id }, documento);
     }
 
+    [HttpPost("subir")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<ActionResult<DocumentoRespuestaDto>> SubirDocumento(Guid pacienteId, [FromForm] SubirDocumentoDto dto)
+    {
+        var documento = await _mediaService.SubirDocumentoAsync(pacienteId, dto);
+        return CreatedAtAction(
+            nameof(ObtenerDocumentoPorId),
+            new { pacienteId, documentoId = documento.Id },
+            documento);
+    }
+
     [HttpPut("{documentoId:guid}")]
     public async Task<ActionResult<DocumentoRespuestaDto>> ActualizarDocumento(
         Guid pacienteId,

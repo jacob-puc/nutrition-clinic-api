@@ -9,6 +9,7 @@ using Npgsql;
 using nutriclinica_backend.Features.Auth.Interfaces;
 using nutriclinica_backend.Features.Auth.Services;
 using nutriclinica_backend.Infrastructure.Security;
+using nutriclinica_backend.Infrastructure.Storage;
 using nutriclinica_backend.Features.Antropometria.Interfaces;
 using nutriclinica_backend.Features.Antropometria.Services;
 using nutriclinica_backend.Features.Citas.Interfaces;
@@ -80,6 +81,14 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+
+var storageConfig = builder.Configuration
+    .GetSection(StorageConfig.SectionName)
+    .Get<StorageConfig>() ?? new StorageConfig();
+
+builder.Services.AddSingleton(storageConfig);
+builder.Services.AddHttpClient("supabase-storage");
+builder.Services.AddSingleton<IStorageService, SupabaseStorageService>();
 
 builder.Services.AddScoped<IPacienteService, PacienteService>();
 builder.Services.AddScoped<IHistorialClinicoService, HistorialClinicoService>();

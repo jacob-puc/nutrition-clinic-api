@@ -50,6 +50,11 @@ public class GlobalExceptionMiddleware
             await EscribirErrorAsync(context, StatusCodes.Status500InternalServerError, "ERROR_BD",
                 "No se pudo completar la operación en la base de datos");
         }
+        catch (StorageNoConfiguradoException ex)
+        {
+            await EscribirErrorAsync(
+                context, StatusCodes.Status503ServiceUnavailable, "STORAGE_NO_CONFIGURADO", ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Excepción no controlada");

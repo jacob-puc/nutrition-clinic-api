@@ -30,3 +30,60 @@ Content-Type: application/json
 }
 
 ###
+
+### Subir foto (multipart)
+# @name subirFoto
+POST {{nutriclinica_backend_HostAddress}}/api/pacientes/{{pacienteId}}/fotos/subir
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----Bound
+
+------Bound
+Content-Disposition: form-data; name="archivo"; filename="frente.jpg"
+Content-Type: image/jpeg
+
+< ./Assets/frente.jpg
+------Bound
+Content-Disposition: form-data; name="consultaId"
+
+{{consultaId}}
+------Bound
+Content-Disposition: form-data; name="tipo"
+
+0
+------Bound
+Content-Disposition: form-data; name="notas"
+
+Progreso post inicio de plan
+------Bound--
+
+### Subir foto sin archivo (debe devolver 400)
+POST {{nutriclinica_backend_HostAddress}}/api/pacientes/{{pacienteId}}/fotos/subir
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----Bound
+
+------Bound
+Content-Disposition: form-data; name="tipo"
+
+0
+------Bound--
+
+### Subir documento (multipart)
+# @name subirDocumento
+POST {{nutriclinica_backend_HostAddress}}/api/pacientes/{{pacienteId}}/documentos/subir
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----Bound
+
+------Bound
+Content-Disposition: form-data; name="archivo"; filename="analisis.pdf"
+Content-Type: application/pdf
+
+< ./Assets/analisis.pdf
+------Bound
+Content-Disposition: form-data; name="tipo"
+
+0
+------Bound
+Content-Disposition: form-data; name="observaciones"
+
+Analisis de control
+------Bound--

@@ -5,6 +5,7 @@ namespace nutriclinica_backend.Features.ExpedienteMedia.Interfaces;
 public interface IExpedienteMediaService
 {
     Task<FotoRespuestaDto> RegistrarFotoAsync(Guid pacienteId, CrearFotoDto dto);
+    Task<FotoRespuestaDto> SubirFotoAsync(Guid pacienteId, SubirFotoDto dto);
     Task<FotoRespuestaDto> RegistrarFotoEnConsultaAsync(Guid consultaId, CrearFotoDto dto);
     Task<IEnumerable<FotoRespuestaDto>> ObtenerFotosPorPacienteAsync(Guid pacienteId);
     Task<FotoRespuestaDto> ObtenerFotoPorIdAsync(Guid pacienteId, Guid fotoId);
@@ -12,6 +13,7 @@ public interface IExpedienteMediaService
     Task EliminarFotoAsync(Guid pacienteId, Guid fotoId);
 
     Task<DocumentoRespuestaDto> RegistrarDocumentoAsync(Guid pacienteId, CrearDocumentoDto dto);
+    Task<DocumentoRespuestaDto> SubirDocumentoAsync(Guid pacienteId, SubirDocumentoDto dto);
     Task<DocumentoRespuestaDto> RegistrarDocumentoEnConsultaAsync(Guid consultaId, CrearDocumentoDto dto);
     Task<IEnumerable<DocumentoRespuestaDto>> ObtenerDocumentosPorPacienteAsync(Guid pacienteId);
     Task<DocumentoRespuestaDto> ObtenerDocumentoPorIdAsync(Guid pacienteId, Guid documentoId);

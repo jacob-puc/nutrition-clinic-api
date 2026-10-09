@@ -36,6 +36,14 @@ public class FotosController : ControllerBase
         return CreatedAtAction(nameof(ObtenerFotoPorId), new { pacienteId, fotoId = foto.Id }, foto);
     }
 
+    [HttpPost("subir")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<ActionResult<FotoRespuestaDto>> SubirFoto(Guid pacienteId, [FromForm] SubirFotoDto dto)
+    {
+        var foto = await _mediaService.SubirFotoAsync(pacienteId, dto);
+        return CreatedAtAction(nameof(ObtenerFotoPorId), new { pacienteId, fotoId = foto.Id }, foto);
+    }
+
     [HttpPut("{fotoId:guid}")]
     public async Task<ActionResult<FotoRespuestaDto>> ActualizarFoto(
         Guid pacienteId,
