@@ -58,6 +58,22 @@
 
 ---
 
+## 🔨 En progreso
+
+### Módulo de Menús → Catálogo de Alimentos
+- [x] Entidad `Alimento` (auditoría `FechaCreacion`, `IsActive`)
+- [x] Configuración en `ApplicationDbContext` (`NombreNormalizado` + índice único parcial)
+- [x] Migración `20261009174116_AgregarCatalogoAlimentos` (aplicada)
+- [x] DTOs: Crear / Actualizar / Respuesta / Filtro
+- [x] Validadores FluentValidation (rangos, URL de imagen, filtro)
+- [x] `IAlimentoService` + `AlimentoService` (normalización de nombres, orden dinámico, cálculo calórico)
+- [x] Registro en DI (`Program.cs`)
+- [ ] **Controller `AlimentosController`** → ver `tasks-user.md`
+- [ ] Pruebas manuales en `.http` → ver `tasks-user.md`
+- [ ] Subida de `ImagenUrl` a Supabase Storage (opcional)
+
+---
+
 ## ⏳ Pendientes (Prioridad Alta)
 
 ### Paginación

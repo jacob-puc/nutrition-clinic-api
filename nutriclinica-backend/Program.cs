@@ -24,6 +24,8 @@ using nutriclinica_backend.Features.Nutricionistas.Interfaces;
 using nutriclinica_backend.Features.Nutricionistas.Services;
 using nutriclinica_backend.Features.Pacientes.Interfaces;
 using nutriclinica_backend.Features.Pacientes.Services;
+using nutriclinica_backend.Features.Alimentos.Interfaces;
+using nutriclinica_backend.Features.Alimentos.Services;
 using nutriclinica_backend.Infrastructure.Middlewares;
 using nutriclinica_backend.Infrastructure.Persistence;
 using FluentValidation;
@@ -98,6 +100,7 @@ builder.Services.AddScoped<INutricionistaService, NutricionistaService>();
 builder.Services.AddScoped<ICitaService, CitaService>();
 builder.Services.AddScoped<IConsultaService, ConsultaService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAlimentoService, AlimentoService>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 

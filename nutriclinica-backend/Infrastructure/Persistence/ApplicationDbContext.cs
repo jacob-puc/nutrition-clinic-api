@@ -17,6 +17,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Cita> Citas => Set<Cita>();
     public DbSet<Consulta> Consultas => Set<Consulta>();
     public DbSet<Nutricionista> Nutricionistas => Set<Nutricionista>();
+    public DbSet<Alimento> Alimentos => Set<Alimento>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -168,6 +169,28 @@ public class ApplicationDbContext : DbContext
 
             entity.HasIndex(n => n.NumeroColegiatura)
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<Alimento>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+
+            entity.Property(a => a.Nombre).HasMaxLength(150).IsRequired();
+            entity.Property(a => a.NombreNormalizado).HasMaxLength(150).IsRequired();
+
+            entity.Property(a => a.Calorias).HasPrecision(6, 2);
+            entity.Property(a => a.Proteinas).HasPrecision(6, 2);
+            entity.Property(a => a.Carbohidratos).HasPrecision(6, 2);
+            entity.Property(a => a.Grasas).HasPrecision(6, 2);
+
+            entity.Property(a => a.ImagenUrl).HasMaxLength(1000);
+
+            entity.HasIndex(a => a.NombreNormalizado)
+                .IsUnique()
+                .HasFilter("\"IsActive\" = true");
+
+            entity.HasIndex(a => a.Calorias);
+            entity.HasIndex(a => a.IsActive);
         });
     }
 }
