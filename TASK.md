@@ -68,9 +68,21 @@
 - [x] Validadores FluentValidation (rangos, URL de imagen, filtro)
 - [x] `IAlimentoService` + `AlimentoService` (normalización de nombres, orden dinámico, cálculo calórico)
 - [x] Registro en DI (`Program.cs`)
-- [ ] **Controller `AlimentosController`** → ver `tasks-user.md`
-- [ ] Pruebas manuales en `.http` → ver `tasks-user.md`
-- [ ] Subida de `ImagenUrl` a Supabase Storage (opcional)
+- [x] **Controller `AlimentosController`** + subida de `ImagenUrl` a Supabase Storage
+- [x] **24/24 pruebas manuales en `.http`** (CRUD, acentos, orden, rangos, 409, 400, borrar/restaurar, 401/404)
+
+### Módulo de Menús → capa PLATO + Plantillas (arquitectura)
+- [x] Enums `DiaSemana` (Lunes..Domingo) y `TiempoComida` (Desayuno..Colacion)
+- [x] Entidades `Plato`, `DetallePlato`, `PlantillaMenu`, `DetallePlantillaMenu`
+- [x] Configuración en `ApplicationDbContext` (FKs, `HasConversion<string>()` + check constraints, índices únicos, precisiones)
+- [x] Migración `20261010215328_AgregarPlantillasMenu` (aplicada)
+- [x] 14 DTOs + 8 validadores FluentValidation
+- [x] `IPlatoService` + `PlatoService` (agregación de macros por gramaje, orden dinámico, duplicado en profundidad, bloqueo de borrado si está en uso)
+- [x] `IPlantillaMenuService` + `PlantillaMenuService` (agregación de macros por cantidad, resumen por tiempo de comida, desviación calórica, duplicado)
+- [x] Registro en DI (`Program.cs`) y build limpio (0 errores, 0 advertencias)
+- [ ] **Controller `PlatosController`** → ver `tasks-user.md`
+- [ ] **Controller `PlantillasMenuController`** → ver `tasks-user.md`
+- [ ] Pruebas manuales en `.http` (19 pruebas) → ver `tasks-user.md`
 
 ---
 
@@ -109,6 +121,11 @@
 ## 📝 Notas
 
 - **⚠️ Flujo de git**: solo hacer `commit` local. **NO hacer `push`** hasta que el usuario lo indique.
+- **Diseño del módulo Menús**: se descartó `DetallePlantillaMenu → Alimento` y se insertó la capa
+  **PLATO** (`PlantillaMenu → DetallePlantillaMenu → Plato → DetallePlato → Alimento`), porque un menú
+  clínico son platillos compuestos reutilizables y permite sustituirlos enteros por alergia.
+  `PlantillaMenu` = semana reutilizable (puede ser 1 día); `MenuAsignado` (siguiente módulo) = plan
+  por paciente con clonado en profundidad.
 - **Supabase Storage**: dos buckets —
   `nutriclinica-media` (público, imágenes, 5 MB) y `nutriclinica-docs` (privado, documentos, 10 MB).
   La key `service_role` va **solo** en user-secrets / variables de entorno, nunca en `appsettings.json`.

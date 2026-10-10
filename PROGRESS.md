@@ -1,8 +1,8 @@
 # Progreso del Proyecto NutriClínica (Backend)
 
-## Estado Actual: **API desplegada, Auth completo y upload de archivos implementado**
+## Estado Actual: **API desplegada, Auth completo, Alimentos completo, módulo Menús en curso**
 
-**Última actualización:** 2026-10-09
+**Última actualización:** 2026-10-10
 
 ---
 
@@ -11,6 +11,8 @@
 - ✅ **API (.NET 10)** desplegada en Render: `https://nutrition-clinic-api.onrender.com`
 - ✅ **Autenticación JWT completa** (login, refresh, logout, guard)
 - ✅ **Upload de archivos** (fotos/documentos) vía Supabase Storage
+- ✅ **Catálogo de Alimentos** completo (24/24 pruebas manuales OK)
+- 🔄 **Plantillas de Menús** con capa `PLATO`: arquitectura lista, faltan controllers
 - ✅ **Base de datos:** Supabase (PostgreSQL) en `us-west-2`
 - ✅ **Despliegue:** Render (free tier)
 - ✅ **Repositorio:** https://github.com/jacob-puc/nutrition-clinic-api
@@ -19,7 +21,7 @@
 
 ## Backend (nutriclinica-backend)
 
-### Módulos implementados (7 features, 47 endpoints)
+### Módulos implementados (9 features, 61 endpoints)
 | Módulo | Entidad | Endpoints | Estado |
 |---|---|---|---|
 | Pacientes | Paciente | 7 (CRUD + expediente + objetivo) | ✅ |
@@ -29,6 +31,31 @@
 | Nutricionistas | Nutricionista | 5 | ✅ |
 | Citas | Cita | 6 | ✅ |
 | Consultas | Consulta | 8 | ✅ |
+| Alimentos | Alimento | 6 (CRUD + restaurar) + imagen | ✅ 24/24 pruebas |
+| Menús | Plato, PlantillaMenu | 14 (2 controllers) | 🔄 Arquitectura lista |
+
+### Módulo de Menús — capa PLATO
+
+Se descartó la idea original `DetallePlantillaMenu → Alimento` y se insertó una capa intermedia:
+
+```
+PlantillaMenu ──< DetallePlantillaMenu >── Plato ──< DetallePlato >── Alimento
+   (semana)         (día + tiempo)        (receta)    (gramajes)      (catálogo)
+```
+
+Motivo: un menú clínico son **platillos compuestos** reutilizables en toda la semana, y permite
+sustituir un plato entero si el paciente es alérgico sin tocar el resto de la agenda.
+
+- **Enums**: `DiaSemana` (Lunes=1..Domingo=7), `TiempoComida` (Desayuno=1..Colacion=6),
+  almacenados como `string` con `HasConversion<string>()` + `CHECK` constraints.
+- **Migración** `20261010215328_AgregarPlantillasMenu` **aplicada**.
+- **Macros calculados, no persistidos**: `Alimento.Calorias * RacionGramos / 100`, luego `* Cantidad`.
+- **`PlantillaMenuRespuestaDto`** trae `DesviacionCalorica` (total − objetivo) y
+  `ResumenPorTiempoComida` (agrupado por día + tiempo).
+- **Borrado lógico** en las 4 entidades; un plato en uso por una plantilla devuelve `409`.
+- **`NutricionistaId` nullable** = catálogo compartido (`null`) vs personal del nutricionista.
+- **`DuplicarPlatoAsync` / `DuplicarPlantillaAsync`**: clonado en profundidad, preparación del
+  clonado que usará `MenuAsignado` (siguiente módulo).
 
 ### Upload de archivos
 - **Almacenamiento**: Supabase Storage, consumido por su REST API directa
@@ -69,6 +96,8 @@
 ### Base de datos
 - **Supabase** (pooler `aws-1-us-west-2.pooler.supabase.com:5432`)
 - Migración `20261003184724_AgregarAutenticacionNutricionistas` (PasswordHash, RefreshToken, RefreshTokenExpiresAt)
+- Migración `20261009174116_AgregarCatalogoAlimentos` (tabla `Alimentos`)
+- Migración `20261010215328_AgregarPlantillasMenu` (tablas `Platos`, `DetallesPlato`, `PlantillasMenu`, `DetallesPlantillaMenu`)
 - Connection string solo por variable de entorno
 - `MaxPoolSize=5` en código para no agotar pooler
 
@@ -100,12 +129,15 @@
 
 ## Próximos pasos prioritarios (Backend)
 
-1. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
-2. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)
-3. **Paginación** en Citas y Consultas (ya hay DTOs, falta implementar)
-4. **Tests** (xUnit + Testcontainers)
-5. **Web a producción** → S3 + CloudFront + dominio
-6. **CI/CD** GitHub Actions (build + deploy automático a Render)
+1. **Terminar el módulo Menús**: `PlatosController` + `PlantillasMenuController` + 19 pruebas `.http`
+   (→ detalle en `tasks-user.md`)
+2. **Módulo `MenuAsignado`**: plan personalizado por paciente con clonado en profundidad desde `PlantillaMenu`
+3. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
+4. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)
+5. **Paginación** en Citas y Consultas (ya hay DTOs, falta implementar)
+6. **Tests** (xUnit + Testcontainers)
+7. **Web a producción** → S3 + CloudFront + dominio
+8. **CI/CD** GitHub Actions (build + deploy automático a Render)
 
 > **⚠️ Git**: solo `commit` local. **No hacer `push`** hasta que el usuario lo indique.
 
