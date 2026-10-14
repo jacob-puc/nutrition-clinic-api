@@ -168,6 +168,54 @@ namespace nutriclinica_backend.Migrations
                     b.ToTable("Consultas");
                 });
 
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.DetalleMenuAsignado", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Cantidad")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("DiaSemana")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Indicaciones")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("MenuAsignadoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("PlatoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TiempoComida")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlatoId");
+
+                    b.HasIndex("MenuAsignadoId", "DiaSemana", "TiempoComida", "PlatoId")
+                        .IsUnique();
+
+                    b.ToTable("DetallesMenuAsignado", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DetallesMenuAsignado_Cantidad", "\"Cantidad\" > 0");
+
+                            t.HasCheckConstraint("CK_DetallesMenuAsignado_DiaSemana", "\"DiaSemana\" IN ('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo')");
+
+                            t.HasCheckConstraint("CK_DetallesMenuAsignado_TiempoComida", "\"TiempoComida\" IN ('Desayuno','MediaManana','Almuerzo','Merienda','Cena','Colacion')");
+                        });
+                });
+
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.DetallePlantillaMenu", b =>
                 {
                     b.Property<Guid>("Id")
@@ -402,6 +450,64 @@ namespace nutriclinica_backend.Migrations
                     b.ToTable("MedidasAntropometricas");
                 });
 
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.MenuAsignado", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("FechaInicio")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<decimal?>("ObjetivoCalorico")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)");
+
+                    b.Property<Guid>("PacienteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PlantillaMenuId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("FechaInicio");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("PacienteId");
+
+                    b.HasIndex("PlantillaMenuId");
+
+                    b.ToTable("MenusAsignados", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MenusAsignados_Estado", "\"Estado\" IN ('Borrador','Activo','Finalizado')");
+
+                            t.HasCheckConstraint("CK_MenusAsignados_ObjetivoCalorico", "\"ObjetivoCalorico\" IS NULL OR \"ObjetivoCalorico\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.Nutricionista", b =>
                 {
                     b.Property<Guid>("Id")
@@ -626,6 +732,25 @@ namespace nutriclinica_backend.Migrations
                     b.Navigation("Paciente");
                 });
 
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.DetalleMenuAsignado", b =>
+                {
+                    b.HasOne("nutriclinica_backend.Core.Entities.MenuAsignado", "MenuAsignado")
+                        .WithMany("Detalles")
+                        .HasForeignKey("MenuAsignadoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("nutriclinica_backend.Core.Entities.Plato", "Plato")
+                        .WithMany()
+                        .HasForeignKey("PlatoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MenuAsignado");
+
+                    b.Navigation("Plato");
+                });
+
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.DetallePlantillaMenu", b =>
                 {
                     b.HasOne("nutriclinica_backend.Core.Entities.PlantillaMenu", "PlantillaMenu")
@@ -729,6 +854,24 @@ namespace nutriclinica_backend.Migrations
                     b.Navigation("Paciente");
                 });
 
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.MenuAsignado", b =>
+                {
+                    b.HasOne("nutriclinica_backend.Core.Entities.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("nutriclinica_backend.Core.Entities.PlantillaMenu", "PlantillaMenu")
+                        .WithMany()
+                        .HasForeignKey("PlantillaMenuId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Paciente");
+
+                    b.Navigation("PlantillaMenu");
+                });
+
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.PlantillaMenu", b =>
                 {
                     b.HasOne("nutriclinica_backend.Core.Entities.Nutricionista", "Nutricionista")
@@ -752,6 +895,11 @@ namespace nutriclinica_backend.Migrations
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.Cita", b =>
                 {
                     b.Navigation("Consulta");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.MenuAsignado", b =>
+                {
+                    b.Navigation("Detalles");
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.Nutricionista", b =>

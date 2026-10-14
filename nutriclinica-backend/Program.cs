@@ -105,6 +105,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAlimentoService, AlimentoService>();
 builder.Services.AddScoped<IPlatoService, PlatoService>();
 builder.Services.AddScoped<IPlantillaMenuService, PlantillaMenuService>();
+builder.Services.AddScoped<IMenuAsignadoService, MenuAsignadoService>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 

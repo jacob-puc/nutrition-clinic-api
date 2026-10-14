@@ -79,10 +79,58 @@
 - [x] 14 DTOs + 8 validadores FluentValidation
 - [x] `IPlatoService` + `PlatoService` (agregación de macros por gramaje, orden dinámico, duplicado en profundidad, bloqueo de borrado si está en uso)
 - [x] `IPlantillaMenuService` + `PlantillaMenuService` (agregación de macros por cantidad, resumen por tiempo de comida, desviación calórica, duplicado)
-- [x] Registro en DI (`Program.cs`) y build limpio (0 errores, 0 advertencias)
-- [ ] **Controller `PlatosController`** → ver `tasks-user.md`
-- [ ] **Controller `PlantillasMenuController`** → ver `tasks-user.md`
-- [ ] Pruebas manuales en `.http` (19 pruebas) → ver `tasks-user.md`
+- [x] Registro en DI (`Program.cs`)
+- [x] **Controller `PlatosController`** y **`PlantillasMenuController`** escritos por el usuario
+- [x] 2 errores CS1503 corregidos (`Ok(await Task)` → `await Task; Ok()`)
+- [x] Constraint de ruta sin cerrar corregida (`{platoId:Guid` → `{platoId:guid}`)
+- [x] `[FromQuery]` → `[FromBody]` en `/duplicar` + `dto?.Nombre`
+- [x] `CreatedAtAction` corregido (`plantillaId` en vez de `id`) — resolvía un **500** real
+- [x] 14 endpoints verificados en vivo (macros cuadran: 525 kcal para pollo 200 g + arroz 150 g)
+- [ ] Pruebas manuales en `.http` (19 pruebas)
+
+---
+
+## 🔨 En progreso — Módulo: Menús Asignados (`MenuAsignado`)
+
+El plan de comidas **de un paciente concreto**, con fecha de inicio. Detalle completo en `tasks-user.md`.
+
+**Decisión de dominio tomada:** al asignar una plantilla a un paciente se **clona en profundidad**.
+Los platos del paciente son copias propias, no referencias al catálogo. Motivo: si 30 pacientes
+tienen "Pollo con arroz" y el nutricionista ajusta ese plato del catálogo, los 30 planes no deben
+cambiar sin decisión clínica. Los planes son historia clínica, no borradores.
+
+**Mi parte (arquitectura) — COMPLETADA:**
+- [x] Enum `MenuAsignadoEstado` (`Borrador` → `Activo` → `Finalizado`)
+- [x] Entidades `MenuAsignado` y `DetalleMenuAsignado`
+- [x] Configuración en `ApplicationDbContext` (FKs a `Paciente` y `PlantillaMenu`, enums como
+  string + check constraints, índice único en `{MenuAsignadoId, DiaSemana, TiempoComida, PlatoId}`)
+- [x] Migración `20261014201651_AgregarMenusAsignados` **aplicada**
+- [x] DTOs `CrearMenuAsignadoDto`, `DetalleMenuAsignadoRespuestaDto`, `MenuAsignadoRespuestaDto`
+- [x] Validador `CrearMenuAsignadoValidator`
+- [x] `IMenuAsignadoService` + `MenuAsignadoService` con **`AsignarPlantillaAsync`** (clonado
+  profundo de platos + detalles) y `DuplicarMenuAsignadoAsync` (copia el plan, opcionalmente a
+  otro paciente, dejándolo en `Borrador`)
+- [x] Registro en DI. Build limpio (0 errores, 0 advertencias)
+
+**Parte del usuario (lógica + controller) — pendiente:**
+- [ ] **`MenuAsignadoService`**: 5 métodos añadidos sobre lo existente (`ObtenerPorId`,
+  `ObtenerLista`, `Actualizar`, `Restaurar`, `Eliminar`) → `tasks-user.md` Tarea 1
+- [ ] **`MenuAsignadosController`** (7 endpoints) → `tasks-user.md` Tarea 2
+- [ ] **DTOs** `ActualizarMenuAsignadoDto`, `MenuAsignadoFiltroDto`,
+  `ActualizarDetalleMenuAsignadoDto`, `DuplicarMenuAsignadoDto` → `tasks-user.md` Tarea 3
+- [ ] **Pruebas `.http`** (ejecución guiada conmigo, no asignada como tarea)
+
+**Reglas clínicas del módulo:**
+- `Estado`: `Borrador` → `Activo` → `Finalizado`
+- Un plan `Finalizado` **no se puede editar** (409): es historia clínica
+- Un plan `Activo` **no se puede eliminar** (409): pasar a finalizado primero
+- `PacienteId` **no se puede cambiar** en una actualización
+- `FechaInicio` solo se puede cambiar si el plan está en `Borrador`
+
+**Módulo Menús (PLATO + Plantillas) — corregido y compilando:**
+- [x] El usuario corrigió el `CreatedAtAction` de `PlantillasMenuController` (`plantillaId` en
+  vez de `id`), que devolvía **500** en `POST /api/plantillas-menu`
+- [x] Los 14 endpoints de Platos y Plantillas quedan funcionando
 
 ---
 

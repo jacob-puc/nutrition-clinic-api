@@ -22,6 +22,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<DetallePlato> DetallesPlato => Set<DetallePlato>();
     public DbSet<PlantillaMenu> PlantillasMenu => Set<PlantillaMenu>();
     public DbSet<DetallePlantillaMenu> DetallesPlantillaMenu => Set<DetallePlantillaMenu>();
+    public DbSet<MenuAsignado> MenusAsignados => Set<MenuAsignado>();
+    public DbSet<DetalleMenuAsignado> DetallesMenuAsignado => Set<DetalleMenuAsignado>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -285,6 +287,80 @@ public class ApplicationDbContext : DbContext
             });
 
             entity.HasIndex(d => new { d.PlantillaMenuId, d.DiaSemana, d.TiempoComida, d.PlatoId })
+                .IsUnique();
+        });
+
+        modelBuilder.Entity<MenuAsignado>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+
+            entity.Property(m => m.Nombre).HasMaxLength(150).IsRequired();
+            entity.Property(m => m.Descripcion).HasMaxLength(1000);
+            entity.Property(m => m.ObjetivoCalorico).HasPrecision(6, 2);
+            entity.Property(m => m.Estado).HasConversion<string>();
+
+            entity.HasOne(m => m.Paciente)
+                .WithMany()
+                .HasForeignKey(m => m.PacienteId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(m => m.PlantillaMenu)
+                .WithMany()
+                .HasForeignKey(m => m.PlantillaMenuId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.ToTable("MenusAsignados", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_MenusAsignados_Estado",
+                    "\"Estado\" IN ('Borrador','Activo','Finalizado')");
+
+                table.HasCheckConstraint(
+                    "CK_MenusAsignados_ObjetivoCalorico",
+                    "\"ObjetivoCalorico\" IS NULL OR \"ObjetivoCalorico\" > 0");
+            });
+
+            entity.HasIndex(m => m.PacienteId);
+            entity.HasIndex(m => m.Estado);
+            entity.HasIndex(m => m.FechaInicio);
+            entity.HasIndex(m => m.IsActive);
+        });
+
+        modelBuilder.Entity<DetalleMenuAsignado>(entity =>
+        {
+            entity.HasKey(d => d.Id);
+
+            entity.HasOne(d => d.MenuAsignado)
+                .WithMany(m => m.Detalles)
+                .HasForeignKey(d => d.MenuAsignadoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Plato)
+                .WithMany()
+                .HasForeignKey(d => d.PlatoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(d => d.DiaSemana).HasConversion<string>();
+            entity.Property(d => d.TiempoComida).HasConversion<string>();
+            entity.Property(d => d.Cantidad).HasPrecision(5, 2);
+            entity.Property(d => d.Indicaciones).HasMaxLength(500);
+
+            entity.ToTable("DetallesMenuAsignado", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_DetallesMenuAsignado_DiaSemana",
+                    "\"DiaSemana\" IN ('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo')");
+
+                table.HasCheckConstraint(
+                    "CK_DetallesMenuAsignado_TiempoComida",
+                    "\"TiempoComida\" IN ('Desayuno','MediaManana','Almuerzo','Merienda','Cena','Colacion')");
+
+                table.HasCheckConstraint(
+                    "CK_DetallesMenuAsignado_Cantidad",
+                    "\"Cantidad\" > 0");
+            });
+
+            entity.HasIndex(d => new { d.MenuAsignadoId, d.DiaSemana, d.TiempoComida, d.PlatoId })
                 .IsUnique();
         });
     }

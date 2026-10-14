@@ -12,7 +12,9 @@
 - ✅ **Autenticación JWT completa** (login, refresh, logout, guard)
 - ✅ **Upload de archivos** (fotos/documentos) vía Supabase Storage
 - ✅ **Catálogo de Alimentos** completo (24/24 pruebas manuales OK)
-- 🔄 **Plantillas de Menús** con capa `PLATO`: arquitectura lista, faltan controllers
+- 🔄 **Plantillas de Menús** con capa `PLATO`: 14 endpoints funcionando y verificados
+- 🔄 **Menús Asignados**: arquitectura lista (migración aplicada + clonado profundo), faltan 5
+  métodos del servicio, el controller y 4 DTOs
 - ✅ **Base de datos:** Supabase (PostgreSQL) en `us-west-2`
 - ✅ **Despliegue:** Render (free tier)
 - ✅ **Repositorio:** https://github.com/jacob-puc/nutrition-clinic-api
@@ -32,7 +34,8 @@
 | Citas | Cita | 6 | ✅ |
 | Consultas | Consulta | 8 | ✅ |
 | Alimentos | Alimento | 6 (CRUD + restaurar) + imagen | ✅ 24/24 pruebas |
-| Menús | Plato, PlantillaMenu | 14 (2 controllers) | 🔄 Arquitectura lista |
+| Menús | Plato, PlantillaMenu | 14 (2 controllers) | ✅ Verificado en vivo |
+| Menús Asignados | MenuAsignado | 2 (asignar, duplicar) | 🔄 Arquitectura lista, faltan 5 métodos + controller |
 
 ### Módulo de Menús — capa PLATO
 
@@ -56,6 +59,25 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 - **`NutricionistaId` nullable** = catálogo compartido (`null`) vs personal del nutricionista.
 - **`DuplicarPlatoAsync` / `DuplicarPlantillaAsync`**: clonado en profundidad, preparación del
   clonado que usará `MenuAsignado` (siguiente módulo).
+- **Estado final**: los 14 endpoints funcionando y verificados en vivo (el usuario corrigió el
+  `CreatedAtAction` que devolvía 500 en `POST /api/plantillas-menu`).
+
+### Módulo de Menús Asignados — el plan del paciente
+
+`MenuAsignado` es el plan de comidas **de un paciente concreto**, con fecha de inicio real.
+
+- **Migración** `20261014201651_AgregarMenusAsignados` **aplicada** (tablas `MenusAsignados`,
+  `DetallesMenuAsignado`).
+- **Enum `MenuAsignadoEstado`**: `Borrador` → `Activo` → `Finalizado`.
+- **Clonado en profundidad** (`AsignarPlantillaAsync`): al asignar una plantilla a un paciente se
+  **copia cada plato y sus ingredientes**. El paciente no referencia el catálogo. Motivo clínico:
+  si 30 pacientes tienen "Pollo con arroz" y se ajusta ese plato en el catálogo, los 30 planes no
+  deben cambiar sin decisión clínica explícita. Los planes son historia clínica.
+- **`DuplicarMenuAsignadoAsync`**: copia un plan existente, opcionalmente a otro paciente, y lo
+  deja en `Borrador`.
+- **Reglas clínicas**: un plan `Finalizado` no se edita (409); un plan `Activo` no se elimina (409);
+  `PacienteId` no se cambia tras la creación; `FechaInicio` solo cambia en `Borrador`.
+- **Pendiente del usuario**: 5 métodos del servicio, el controller y 4 DTOs → `tasks-user.md`.
 
 ### Upload de archivos
 - **Almacenamiento**: Supabase Storage, consumido por su REST API directa
@@ -98,6 +120,7 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 - Migración `20261003184724_AgregarAutenticacionNutricionistas` (PasswordHash, RefreshToken, RefreshTokenExpiresAt)
 - Migración `20261009174116_AgregarCatalogoAlimentos` (tabla `Alimentos`)
 - Migración `20261010215328_AgregarPlantillasMenu` (tablas `Platos`, `DetallesPlato`, `PlantillasMenu`, `DetallesPlantillaMenu`)
+- Migración `20261014201651_AgregarMenusAsignados` (tablas `MenusAsignados`, `DetallesMenuAsignado`)
 - Connection string solo por variable de entorno
 - `MaxPoolSize=5` en código para no agotar pooler
 
@@ -129,9 +152,9 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 
 ## Próximos pasos prioritarios (Backend)
 
-1. **Terminar el módulo Menús**: `PlatosController` + `PlantillasMenuController` + 19 pruebas `.http`
+1. **Terminar `MenuAsignado`**: 5 métodos del servicio, `MenuAsignadosController` y 4 DTOs
    (→ detalle en `tasks-user.md`)
-2. **Módulo `MenuAsignado`**: plan personalizado por paciente con clonado en profundidad desde `PlantillaMenu`
+2. **Pruebas `.http` del módulo Menús y Menús Asignados** (ejecución guiada)
 3. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
 4. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)
 5. **Paginación** en Citas y Consultas (ya hay DTOs, falta implementar)
