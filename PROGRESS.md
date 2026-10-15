@@ -2,7 +2,7 @@
 
 ## Estado Actual: **API desplegada, Auth completo, Alimentos completo, módulo Menús en curso**
 
-**Última actualización:** 2026-10-10
+**Última actualización:** 2026-10-15
 
 ---
 
@@ -13,8 +13,8 @@
 - ✅ **Upload de archivos** (fotos/documentos) vía Supabase Storage
 - ✅ **Catálogo de Alimentos** completo (24/24 pruebas manuales OK)
 - 🔄 **Plantillas de Menús** con capa `PLATO`: 14 endpoints funcionando y verificados
-- 🔄 **Menús Asignados**: arquitectura lista (migración aplicada + clonado profundo), faltan 5
-  métodos del servicio, el controller y 4 DTOs
+- 🔄 **Menús Asignados**: servicio al 90 % (sin clonado de platos), faltan 2 métodos y el controller
+  → `tasks-user.md`
 - ✅ **Base de datos:** Supabase (PostgreSQL) en `us-west-2`
 - ✅ **Despliegue:** Render (free tier)
 - ✅ **Repositorio:** https://github.com/jacob-puc/nutrition-clinic-api
@@ -35,7 +35,7 @@
 | Consultas | Consulta | 8 | ✅ |
 | Alimentos | Alimento | 6 (CRUD + restaurar) + imagen | ✅ 24/24 pruebas |
 | Menús | Plato, PlantillaMenu | 14 (2 controllers) | ✅ Verificado en vivo |
-| Menús Asignados | MenuAsignado | 2 (asignar, duplicar) | 🔄 Arquitectura lista, faltan 5 métodos + controller |
+| Menús Asignados | MenuAsignado | 2 (asignar, duplicar) | 🔄 Servicio al 90 %, faltan 2 métodos + controller |
 
 ### Módulo de Menús — capa PLATO
 
@@ -57,8 +57,8 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
   `ResumenPorTiempoComida` (agrupado por día + tiempo).
 - **Borrado lógico** en las 4 entidades; un plato en uso por una plantilla devuelve `409`.
 - **`NutricionistaId` nullable** = catálogo compartido (`null`) vs personal del nutricionista.
-- **`DuplicarPlatoAsync` / `DuplicarPlantillaAsync`**: clonado en profundidad, preparación del
-  clonado que usará `MenuAsignado` (siguiente módulo).
+- **`DuplicarPlatoAsync` / `DuplicarPlantillaAsync`**: clonado en profundidad (copia receta o
+  semana; **los platos siempre se referencian, nunca se copian**, revisado 2026-10-15).
 - **Estado final**: los 14 endpoints funcionando y verificados en vivo (el usuario corrigió el
   `CreatedAtAction` que devolvía 500 en `POST /api/plantillas-menu`).
 
@@ -69,15 +69,24 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 - **Migración** `20261014201651_AgregarMenusAsignados` **aplicada** (tablas `MenusAsignados`,
   `DetallesMenuAsignado`).
 - **Enum `MenuAsignadoEstado`**: `Borrador` → `Activo` → `Finalizado`.
-- **Clonado en profundidad** (`AsignarPlantillaAsync`): al asignar una plantilla a un paciente se
-  **copia cada plato y sus ingredientes**. El paciente no referencia el catálogo. Motivo clínico:
-  si 30 pacientes tienen "Pollo con arroz" y se ajusta ese plato en el catálogo, los 30 planes no
-  deben cambiar sin decisión clínica explícita. Los planes son historia clínica.
+- **Sin clonado de platos** (decisión revisada 2026-10-15): `DetalleMenuAsignado.PlatoId` apunta al
+  plato del catálogo. Se quitó el clonado porque las copias no llevaban marca en `Plato` y se
+  mezclaban con el catálogo en `GET /api/platos`, y porque `DuplicarPlantillaAsync` nunca copió
+  platos. Si se corrige un plato del catálogo, los planes que lo usan **se actualizan**; la
+  personalización por paciente vive en `Cantidad` e `Indicaciones` del detalle.
 - **`DuplicarMenuAsignadoAsync`**: copia un plan existente, opcionalmente a otro paciente, y lo
   deja en `Borrador`.
-- **Reglas clínicas**: un plan `Finalizado` no se edita (409); un plan `Activo` no se elimina (409);
-  `PacienteId` no se cambia tras la creación; `FechaInicio` solo cambia en `Borrador`.
-- **Pendiente del usuario**: 5 métodos del servicio, el controller y 4 DTOs → `tasks-user.md`.
+- **Reglas clínicas**: un plan `Finalizado` no se edita (409, implementado en
+  `ActualizarMenuAsignadoAsync`); un plan `Activo` no se elimina (409, **pendiente** del usuario);
+  `PacienteId` no se cambia (el DTO no lo trae); `FechaInicio` solo cambia en `Borrador` (409,
+  implementado).
+- **`PlatoService.EliminarPlatoAsync`**: además del check de plantillas, devuelve **409** si el
+  plato está en el plan activo de un paciente.
+- **Servicio completo salvo 2 métodos**: `ObtenerPorId`, `ObtenerLista` (filtros `PacienteId`,
+  `Estado`, `FechaDesde/Hasta`, `SoloActivos`, orden `nombre|fechainicio|fechacreacion`) y
+  `Actualizar` (reconciliado de detalles + reglas clínicas) están hechos.
+- **Pendiente del usuario**: `RestaurarMenuAsignadoAsync` y `EliminarMenuAsignadoAsync` (2 errores
+  CS0535) + `MenuAsignadosController` (7 endpoints) → `tasks-user.md`.
 
 ### Upload de archivos
 - **Almacenamiento**: Supabase Storage, consumido por su REST API directa
@@ -152,8 +161,8 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 
 ## Próximos pasos prioritarios (Backend)
 
-1. **Terminar `MenuAsignado`**: 5 métodos del servicio, `MenuAsignadosController` y 4 DTOs
-   (→ detalle en `tasks-user.md`)
+1. **Terminar `MenuAsignado`**: 2 métodos del servicio (`Restaurar`, `Eliminar`) y
+   `MenuAsignadosController` (→ detalle en `tasks-user.md`)
 2. **Pruebas `.http` del módulo Menús y Menús Asignados** (ejecución guiada)
 3. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
 4. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)

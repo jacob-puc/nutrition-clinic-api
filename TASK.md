@@ -94,30 +94,35 @@
 
 El plan de comidas **de un paciente concreto**, con fecha de inicio. Detalle completo en `tasks-user.md`.
 
-**Decisión de dominio tomada:** al asignar una plantilla a un paciente se **clona en profundidad**.
-Los platos del paciente son copias propias, no referencias al catálogo. Motivo: si 30 pacientes
-tienen "Pollo con arroz" y el nutricionista ajusta ese plato del catálogo, los 30 planes no deben
-cambiar sin decisión clínica. Los planes son historia clínica, no borradores.
+**Decisión de dominio (CAMBIADA, 2026-10-15): SIN clonado en profundidad.**
+`DetalleMenuAsignado.PlatoId` apunta al plato del catálogo. Se quitó el clonado porque las copias
+de plato no llevaban marca en `Plato` y se mezclaban con el catálogo en `GET /api/platos`, y porque
+`DuplicarPlantillaAsync` nunca copió platos: eran dos filosofías sin motivo. Si se corrige un plato
+del catálogo, los planes que lo usan **se actualizan** (una corrección de receta aplica a todos).
+La personalización por paciente vive en `Cantidad` e `Indicaciones` del detalle.
 
-**Mi parte (arquitectura) — COMPLETADA:**
+**Hecho (míos + del usuario):**
 - [x] Enum `MenuAsignadoEstado` (`Borrador` → `Activo` → `Finalizado`)
 - [x] Entidades `MenuAsignado` y `DetalleMenuAsignado`
 - [x] Configuración en `ApplicationDbContext` (FKs a `Paciente` y `PlantillaMenu`, enums como
   string + check constraints, índice único en `{MenuAsignadoId, DiaSemana, TiempoComida, PlatoId}`)
 - [x] Migración `20261014201651_AgregarMenusAsignados` **aplicada**
-- [x] DTOs `CrearMenuAsignadoDto`, `DetalleMenuAsignadoRespuestaDto`, `MenuAsignadoRespuestaDto`
-- [x] Validador `CrearMenuAsignadoValidator`
-- [x] `IMenuAsignadoService` + `MenuAsignadoService` con **`AsignarPlantillaAsync`** (clonado
-  profundo de platos + detalles) y `DuplicarMenuAsignadoAsync` (copia el plan, opcionalmente a
-  otro paciente, dejándolo en `Borrador`)
-- [x] Registro en DI. Build limpio (0 errores, 0 advertencias)
+- [x] 7 DTOs del módulo (4 escritos por el usuario: `ActualizarMenuAsignadoDto`,
+  `ActualizarDetallesMenuAsignadoDto`, `MenuAsignadoFiltroDto`, `DuplicarMenuAsignadoDto`)
+- [x] 4 validadores (`Crear` y `ActualizarDetalles` míos; `Actualizar` y `Filtro` terminados por mí
+  sobre el borrador del usuario)
+- [x] `MenuAsignadoService`: `AsignarPlantillaAsync` (**ya sin clonado**),
+  `DuplicarMenuAsignadoAsync` (sin clonado), `ObtenerMenuAsignadoPorIdAsync` (usuario),
+  `ObtenerMenuAsignadoAsync` (filtros + orden), `ActualizarMenuAsignadoAsync`
+  (reconciliado de detalles + reglas clínicas)
+- [x] `PlatoService.EliminarPlatoAsync`: **409** si el plato está en el plan activo de un paciente
+- [x] Registro en DI
 
-**Parte del usuario (lógica + controller) — pendiente:**
-- [ ] **`MenuAsignadoService`**: 5 métodos añadidos sobre lo existente (`ObtenerPorId`,
-  `ObtenerLista`, `Actualizar`, `Restaurar`, `Eliminar`) → `tasks-user.md` Tarea 1
-- [ ] **`MenuAsignadosController`** (7 endpoints) → `tasks-user.md` Tarea 2
-- [ ] **DTOs** `ActualizarMenuAsignadoDto`, `MenuAsignadoFiltroDto`,
-  `ActualizarDetalleMenuAsignadoDto`, `DuplicarMenuAsignadoDto` → `tasks-user.md` Tarea 3
+**Pendiente del usuario → `tasks-user.md`:**
+- [ ] **Tarea 1**: 2 métodos restantes del servicio (`RestaurarMenuAsignadoAsync` y
+  `EliminarMenuAsignadoAsync`, este con regla 409 si el plan está `Activo`). El build marca
+  **exactamente 2 errores CS0535**, que desaparecen al implementarlos
+- [ ] **Tarea 2**: `MenuAsignadosController` (7 endpoints)
 - [ ] **Pruebas `.http`** (ejecución guiada conmigo, no asignada como tarea)
 
 **Reglas clínicas del módulo:**
@@ -173,7 +178,7 @@ cambiar sin decisión clínica. Los planes son historia clínica, no borradores.
   **PLATO** (`PlantillaMenu → DetallePlantillaMenu → Plato → DetallePlato → Alimento`), porque un menú
   clínico son platillos compuestos reutilizables y permite sustituirlos enteros por alergia.
   `PlantillaMenu` = semana reutilizable (puede ser 1 día); `MenuAsignado` (siguiente módulo) = plan
-  por paciente con clonado en profundidad.
+  por paciente, que **referencia el plato del catálogo** (sin clonado: decisión revisada 2026-10-15).
 - **Supabase Storage**: dos buckets —
   `nutriclinica-media` (público, imágenes, 5 MB) y `nutriclinica-docs` (privado, documentos, 10 MB).
   La key `service_role` va **solo** en user-secrets / variables de entorno, nunca en `appsettings.json`.

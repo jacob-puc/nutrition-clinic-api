@@ -1,137 +1,75 @@
-# Tareas asignadas — Servicio de Menús Asignados
+# Tareas asignadas — Terminar el módulo de Menús Asignados
 
-## Contexto
+## Contexto — qué estado tiene el módulo
 
-El módulo de plantillas ya tiene los controllers escritos por ti. Quedan **2 errores de compilación**
-en los PATCH (te los expliqué en el chat) y 3 fallos en runtime que también te listé. Arregla eso
-y seguimos.
+El módulo **`MenuAsignado`** es el plan de comidas de **un paciente en concreto**, con fecha de
+inicio. Aquí está el 80 % hecho. Tu tarea ya **no es construir el servicio**, es **terminarlo**.
 
-Lo que sigue es el módulo **`MenuAsignado`**: el plan de comidas de **un paciente en concreto**,
-con fecha de inicio. Aquí es donde se pone interesante, y es tu parte porque se parece mucho a
-`PlantillaMenuService`, que ya existe.
+### ✅ Ya está hecho (no tocar)
 
----
-
-## 🧠 Primero: por qué `MenuAsignado` no es lo mismo que `PlantillaMenu`
-
-Piénsalo como nutricionista:
-
-| | `PlantillaMenu` | `MenuAsignado` |
+| Parte | Quién | Estado |
 |---|---|---|
-| ¿De quién es? | Del nutricionista (o compartida) | **De un paciente** |
-| ¿Para cuándo? | Semana genérica reutilizable | Tiene **fecha de inicio** real |
-| ¿Se puede editar libremente? | Sí, es un borrador de trabajo | Con cuidado: ya se le entregó al paciente |
-| ¿Cuántas copias? | Una | Una **por paciente** |
+| Enum `MenuAsignadoEstado`, entidades, config EF, migración aplicada | yo | ✅ |
+| DTOs: `Crear`, `Actualizar`, `Detalle` (respuesta y de actualización), `Filtro`, `Duplicar` | **tú** | ✅ |
+| Validadores: `Crear`, `Actualizar`, `ActualizarDetalles`, `Filtro` | yo (2) + tú (1) | ✅ |
+| `AsignarPlantillaAsync` y `DuplicarMenuAsignadoAsync` | yo | ✅ |
+| `ObtenerMenuAsignadoPorIdAsync` | tú | ✅ |
+| `ObtenerMenuAsignadoAsync` (filtros + orden) | yo | ✅ |
+| `ActualizarMenuAsignadoAsync` (reconciliado de detalles + reglas clínicas) | yo | ✅ |
 
-La decisión importante que ya tomé, y que te explico porque es la que sostiene todo:
+### ⚠️ Decisión de dominio CAMBIADA: ya NO hay clonado en profundidad
 
-**Cuando se asigna una plantilla a un paciente, se clona en profundidad.** Los platos del paciente
-son **copias propias**, no referencias a los platos del catálogo.
+Antes al asignar una plantilla se copiaban los platos del catálogo. **Se quitó** porque las copias
+no tenían ninguna marca en `Plato` y se mezclaban con el catálogo en `GET /api/platos`, y porque
+`DuplicarPlantillaAsync` nunca copió platos — eran dos filosofías distintas sin motivo.
 
-¿Por qué? Imagina que "Pollo con arroz" está en el plan de 30 pacientes. Un día decides que ese
-plato tiene demasiada grasa y le quitas la aceituna. Si los planes **referenciaran** el plato del
-catálogo, los 30 pacientes cambiarían sin que nadie lo decidiera para ellos. Clínicamente eso es
-malo: el paciente reacciona a un cambio que su nutricionista no le ordenó.
+**Ahora `DetalleMenuAsignado.PlatoId` apunta al plato del catálogo, directo.** Las consecuencias:
 
-El costo es que se duplican filas, pero el volumen de un consultorio es bajo y compensa la estabilidad.
-
-Para eso existen `DuplicarPlatoAsync` y `DuplicarPlantillaAsync` que ya escribí: son el calentamiento
-del clonado. **El clonado profundo de la asignación lo hago yo** (es la parte complicada).
-
----
-
-## ✅ Lo que voy a hacer yo (no tocar)
-
-| Archivo | Qué hace | Estado |
-|---|---|---|
-| `Core/Enums/MenuAsignadoEstado.cs` | `Borrador` / `Activo` / `Finalizado` | ✅ hecho |
-| `Core/Entities/MenuAsignado.cs` | Cabecera: paciente, plantilla de origen, fecha de inicio, estado | ✅ hecho |
-| `Core/Entities/DetalleMenuAsignado.cs` | Agenda: día + tiempo + plato + cantidad | ✅ hecho |
-| `ApplicationDbContext.cs` | `DbSet` + FKs + check constraints + índices | ✅ hecho |
-| Migración `20261014201651_AgregarMenusAsignados` | Tablas `MenusAsignados` y `DetallesMenuAsignado` | ✅ **ya aplicada** |
-| `DTOs/CrearMenuAsignadoDto.cs` | Cabecera para asignar plantilla | ✅ hecho |
-| `DTOs/DetalleMenuAsignadoRespuestaDto.cs` | Detalle con macros | ✅ hecho |
-| `DTOs/MenuAsignadoRespuestaDto.cs` | Respuesta completa | ✅ hecho |
-| `DTOs/Validators/CrearMenuAsignadoValidator.cs` | Validación de asignación | ✅ hecho |
-| `IMenuAsignadoService.cs` | Contrato | ✅ hecho |
-| `MenuAsignadoService.AsignarPlantillaAsync(...)` | **El clonado profundo** | ✅ hecho |
-| `MenuAsignadoService.DuplicarMenuAsignadoAsync(...)` | Clonar plan, opcionalmente a otro paciente | ✅ hecho |
-| `Program.cs` | Servicio registrado en DI | ✅ hecho |
-
-### El modelo de datos (ya existe, esto es referencia)
-
-```
-MenuAsignado
-├─ Id                      Guid
-├─ PacienteId              Guid      (FK obligatoria, paciente activo)
-├─ PlantillaMenuId         Guid?     (de dónde vino; null si se armó desde cero)
-├─ Nombre                  string(150)
-├─ Descripcion             string(1000)?
-├─ ObjetivoCalorico        decimal(6,2)?
-├─ FechaInicio             DateOnly
-├─ Estado                  MenuAsignadoEstado  → "Borrador" | "Activo" | "Finalizado"
-├─ FechaCreacion           DateTime
-└─ IsActive                bool      (borrado lógico, igual que el resto)
-
-DetalleMenuAsignado
-├─ Id                      Guid
-├─ MenuAsignadoId          Guid      (FK, cascade)
-├─ PlatoId                 Guid      (apunta a la COPIA privada del paciente)
-├─ DiaSemana               DiaSemana
-├─ TiempoComida            TiempoComida
-├─ Cantidad                decimal(5,2)
-├─ Indicaciones            string(500)?
-└─ Orden                   int
-```
-
-Reutilizas los enums `DiaSemana` y `TiempoComida` **tal cual**.
+- Si el nutricionista corrige un plato del catálogo, **todos los planes que lo usan se actualizan**.
+  Eso está bien: corregir una receta errónea es una decisión clínica que aplica a todos.
+- La personalización por paciente **no se pierde**: `Cantidad` (porciones) e `Indicaciones`
+  ("sin sal") viven en `DetalleMenuAsignado`, que es **por paciente**.
+- Si un paciente necesita una receta distinta, se crea otro plato variante en el catálogo.
+- Agregué bloqueo en `PlatoService.EliminarPlatoAsync`: un plato en el plan activo de un paciente
+  devuelve **409**.
 
 ---
 
-## 📌 Tarea 1 — Completar `MenuAsignadoService.cs`
+## 📌 Tarea 1 — Terminar `MenuAsignadoService.cs` (2 métodos)
 
-**El archivo ya existe.** Tiene el constructor, el clonado y los mapeos privados que escribí yo
-(`CargarMenuAsync`, `MapearMenu`, `CalcularMacrosDelPlato`). **No toques esos métodos.**
+**El servicio está al 90 %.** El compilador falla con **exactamente 2 errores CS0535**, y son los 2
+métodos que te faltan. Cuando `dotnet build` pase a 0 errores, terminaste.
 
-Añádeles estas 5 firmas a la interfaz `IMenuAsignadoService.cs` e implémentalas en el servicio.
+**No toques** los métodos existentes (`AsignarPlantillaAsync`, `DuplicarMenuAsignadoAsync`,
+`ObtenerMenuAsignadoAsync`, `ActualizarMenuAsignadoAsync`, `CargarMenuAsync`, `MapearMenu` ni los
+privados `Validar*`).
+
 Abre `PlantillaMenuService.cs` al lado: **es tu plantilla literal**.
 
-### 1. `ObtenerMenuAsignadoPorIdAsync(Guid)`
-Copia `ObtenerPlantillaPorIdAsync`. Cambios:
+### 1. `RestaurarMenuAsignadoAsync(Guid menuId)`
+
+Copia literal de `RestaurarPlantillaAsync` (línea 275). Tres cambios:
+
 - Busca en `_context.MenusAsignados`.
-- El include es `.Include(d => d.Plato).ThenInclude(p => p.Detalles).ThenInclude(d => d.Alimento)`
-  sobre `DetallesMenuAsignado` — **igual que el de plantillas**, porque los macros se calculan igual.
-- Trae también el nombre del paciente y el `Estado` en la respuesta.
+- Mensaje: `"El menú asignado ya está activo."`
+- `Task` sin retorno: `await _context.SaveChangesAsync();` y nada más.
 
-### 2. `ObtenerMenusAsignadosAsync(MenuAsignadoFiltroDto)`
-Copia `ObtenerPlantillasAsync`. Cambios en los filtros:
-- **`PacienteId`** (obligatorio en el filtro real, pero déjalo `Guid?` y valida tú): es el filtro más
-  importante, un nutricionista siempre ve los planes de *un* paciente.
-- **`Estado`** (`MenuAsignadoEstado?`): `Borrador` / `Activo` / `Finalizado`.
-- **`FechaDesde` / `FechaHasta`** (`DateOnly?`): filtran por `FechaInicio`. Es un rango, igual que
-  `CaloriasMinimo/Maximo` en `AlimentoFiltroDto`.
-- Quitar `ObjetivoCaloricoMinimo/Maximo` si quieres simplificar, o déjalos.
-- El orden dinámico: `nombre`, `fechainicio`, `fechacreacion`.
+### 2. `EliminarMenuAsignadoAsync(Guid menuId)`
 
-### 3. `ActualizarMenuAsignadoAsync(Guid, ActualizarMenuAsignadoDto)`
-Copia `ActualizarPlantillaAsync` (el reconciliado de detalles por `Id`, añadir/conservar/borrar).
-**Tres reglas clínicas adicionales, y son las que más cuidan:**
+Copia de `EliminarPlantillaAsync` (línea 290), **más una regla clínica** que sí te toca resolver:
 
-- **Si `Estado == Finalizado`, rechaza con `ConflictException`** ("un plan finalizado no se modifica").
-  Un plan que ya se ejecutó es historia clínica, no borrador.
-- **No dejes cambiar `PacienteId`** en la actualización. Cambiar el paciente de un plan existente es
-  un error catastrófico de expediente. Si el DTO no trae `PacienteId`, esto ya viene resuelto.
-- **No dejes cambiar `FechaInicio` si `Estado != Borrador`**. Solo un borrador puede reprogramarse.
+```csharp
+// después de cargar `menu` y de verificar que ya no esté eliminado:
+if (menu.Estado == MenuAsignadoEstado.Activo)
+{
+    throw new ConflictException(
+        "No se puede eliminar un plan activo. Pásalo a Finalizado primero.");
+}
+```
 
-### 4. `RestaurarMenuAsignadoAsync(Guid)`
-Copia `RestaurarPlatoAsync` exacto: buscar, `ConflictException` si ya está activo, `IsActive = true`.
+Luego `menu.IsActive = false;` + `SaveChangesAsync`.
 
-### 5. `EliminarMenuAsignadoAsync(Guid)`
-Copia `EliminarPlatoAsync`: buscar, `ConflictException` si ya está eliminado, `IsActive = false`.
-
-**Regla extra que sí te toca resolver tú:** un plan **`Activo` no se puede eliminar**, hay que
-pasarlo a `Finalizado` primero. Devuelve `ConflictException` con un mensaje que le diga al usuario
-eso mismo. (`Borrador` y `Finalizado` sí se pueden eliminar lógicamente.)
+> `Borrador` y `Finalizado` sí se pueden eliminar lógicamente. Solo `Activo` está bloqueado.
 
 ---
 
@@ -145,46 +83,27 @@ eso mismo. (`Borrador` y `Finalizado` sí se pueden eliminar lógicamente.)
 [Route("api/menu-asignados")]
 ```
 
-**6 endpoints.** El de creación **ya existe en mi servicio**, solo lo expones tú:
+**7 endpoints.** Los 5 primeros ya existen en el servicio, solo los expones tú; los 2 últimos son
+los métodos de la Tarea 1:
 
-| Método | Ruta | Método del servicio |
-|---|---|---|
-| `POST` | `/api/menu-asignados/asignar` | `AsignarPlantillaAsync([FromBody] CrearMenuAsignadoDto)` → 201 |
-| `POST` | `/api/menu-asignados/{menuId:guid}/duplicar` | `DuplicarMenuAsignadoAsync(menuId, dto?.Nombre, dto?.PacienteId)` |
-| `GET` | `/api/menu-asignados` | `ObtenerMenusAsignadosAsync([FromQuery] MenuAsignadoFiltroDto)` |
-| `GET` | `/api/menu-asignados/{menuId:guid}` | `ObtenerMenuAsignadoPorIdAsync(menuId)` |
-| `PUT` | `/api/menu-asignados/{menuId:guid}` | `ActualizarMenuAsignadoAsync(menuId, dto)` |
-| `PATCH` | `/api/menu-asignados/{menuId:guid}/restaurar` | `RestaurarMenuAsignadoAsync(menuId)` → `await` + `Ok()` |
-| `DELETE` | `/api/menu-asignados/{menuId:guid}` | `EliminarMenuAsignadoAsync(menuId)` → `NoContent()` |
+| Método | Ruta | Método del servicio | Respuesta |
+|---|---|---|---|
+| `POST` | `/api/menu-asignados/asignar` | `AsignarPlantillaAsync([FromBody] CrearMenuAsignadoDto)` | 201 + `CreatedAtAction` |
+| `POST` | `/{menuId:guid}/duplicar` | `DuplicarMenuAsignadoAsync(menuId, dto?.Nombre, dto?.PacienteId)` | 201 |
+| `GET` | `/api/menu-asignados` | `ObtenerMenuAsignadoAsync([FromQuery] MenuAsignadoFiltroDto)` | 200 |
+| `GET` | `/{menuId:guid}` | `ObtenerMenuAsignadoPorIdAsync(menuId)` | 200 |
+| `PUT` | `/{menuId:guid}` | `ActualizarMenuAsignadoAsync(menuId, dto)` | 200 |
+| `PATCH` | `/{menuId:guid}/restaurar` | `RestaurarMenuAsignadoAsync(menuId)` → `await` + `Ok()` | 200 |
+| `DELETE` | `/{menuId:guid}` | `EliminarMenuAsignadoAsync(menuId)` | 204 |
 
-> Para `/duplicar` crea `DuplicarMenuAsignadoDto` con `Nombre?` y `PacienteId?` (mismo molde que
-> `DuplicarPlatoDto`). `PacienteId` permite pasar el mismo plan a otro paciente.
+Molde literal: `Controllers/PlantillasMenuController.cs`.
 
-**Lo que ya aprendiste y aplica aquí** (los 3 errores que tuviste antes):
+**Los 4 errores que ya aprendiste y aplican aquí:**
 
-- `await servicio.XAsync(id);` + `return Ok();` en el PATCH — el `Task` sin genérico no tiene
-  valor que pasar a `Ok(...)`.
-- Cierra bien el `}` de las constraints de ruta.
-- `[FromBody]` en los DTO que vienen del body, y `dto?.Nombre` donde el DTO es nullable.
-- En el `POST`, `CreatedAtAction` necesita el **nombre del parámetro de la ruta** (`menuId`),
-  no `id` — si te equivocas devuelve 500.
-
----
-
-## 📌 Tarea 3 — Los DTOs que faltan
-
-Ya hice `CrearMenuAsignadoDto`, `DetalleMenuAsignadoRespuestaDto` y `MenuAsignadoRespuestaDto`.
-Te faltan estos dos, con `PlantillaMenuFiltroDto` y `ActualizarPlantillaMenuDto` como molde:
-
-- `ActualizarMenuAsignadoDto` — copia de `ActualizarPlantillaMenuDto` (nombre, descripción,
-  objetivo calórico, detalles), **más `FechaInicio` y `Estado`**. Recuerda: `Estado` no puede ser
-  `Finalizado` si el plan ya está finalizado, y `FechaInicio` solo cambia en `Borrador`.
-- `MenuAsignadoFiltroDto` — `PacienteId`, `Estado`, `FechaDesde`, `FechaHasta`, `SoloActivos`,
-  `OrdenarPor`, `Descendente`.
-- `ActualizarDetalleMenuAsignadoDto` — copia de `CrearDetallePlantillaMenuDto`, **con `Id` nullable**.
-
-Validadores en `Validators/`, uno por DTO, copiando los de plantillas. No olvides el de filtro con
-el `Must` que valida que el mínimo no supere al máximo.
+- `await servicio.XAsync(id);` + `return Ok();` en el PATCH — el `Task` sin genérico no tiene valor.
+- Cierra bien el `}` de los constraints de ruta.
+- `[FromBody]` en los DTO del body, `dto?.Nombre` donde el DTO es nullable.
+- `CreatedAtAction` necesita el **nombre del parámetro de la ruta** (`menuId`), no `id`.
 
 ---
 
@@ -202,34 +121,31 @@ el `Must` que valida que el mínimo no supere al máximo.
 
 ## 🔬 Las pruebas del `.http` — para que las entiendas, no como tarea
 
-Antes te las dejaba como tarea. Mejor: te explico **qué prueba cada cosa y por qué importa**, y
-cuando el backend compile las corremos juntos.
+Cuando compile con 0 errores, arrancamos juntos:
 
 ```bash
 cd nutriclinica-backend/nutriclinica-backend
 dotnet run --urls "http://localhost:5036"
 ```
 
-Los user-secrets **solo cargan en Development**, así que no pongas `--environment Production` en local.
-Primero `POST /api/auth/login` (el token dura 1 h).
+Los user-secrets **solo cargan en Development**. Primero `POST /api/auth/login` (el token dura 1 h;
+el campo es `correoElectronico`).
 
 Lo que hay que cubrir, en orden de importancia clínica:
 
-1. **Asignar una plantilla a un paciente** y verificar que los macros cuadren. Aquí se prueba el
-   clonado: si cambias el plato del catálogo después, el plan del paciente **no debe cambiar**.
-2. **Editar porciones de un plan** (`PUT`) — el nutricionista ajusta cantidad de un plato porque el
-   paciente no bajó de peso. Verifica que `CaloriasTotales` se recalcule.
-3. **Cambiar un plato por otro** en el mismo día/tiempo — simula una alergia detectada en consulta.
-4. **`Estado = Finalizado` y luego intentar editar** → debe responder `409`. Esta es la prueba de
-   seguridad del expediente clínico.
+1. **Asignar una plantilla a un paciente** y verificar que los macros cuadren. Y ahora, con el
+   cambio de decisión: si cambias un plato del catálogo, **sí debe actualizarse** en el plan del
+   paciente (es lo esperado, al revés que antes).
+2. **Editar porciones de un plan** (`PUT`) — verificar que `CaloriasTotales` se recalcule.
+3. **Cambiar un plato por otro** en el mismo día/tiempo — simula una alergia detectada.
+4. **`Estado = Finalizado` y luego intentar editar** → debe responder `409`.
 5. **Eliminar un plan `Activo`** → `409` con mensaje de "pásalo a finalizado primero".
-6. **Filtro por paciente** — que solo salgan los planes de ese paciente, nunca los de otro.
+6. **Filtro por paciente** — solo los planes de ese paciente.
 7. **Filtro por rango de fechas** — `?fechaDesde=2026-10-14&fechaHasta=2026-10-20`.
-8. **Borrar y restaurar** — el borrado es lógico, el plan debe volver con `PATCH /restaurar`.
-9. **401 sin token** y **404 con un GUID inventado** — que nadie lea expedientes ajenos.
+8. **Borrar y restaurar** — borrado lógico, `PATCH /restaurar`.
+9. **401 sin token** y **404 con un GUID inventado**.
 
-Cuando quieras, arrancamos el backend y lo vas ejecutando tú mientras yo te voy diciendo qué
-esperas ver en cada respuesta. Eso te deja claro el módulo sin que tengas que copiar pruebas a mano.
+Tú lo vas ejecutando, yo te digo qué esperas ver en cada respuesta.
 
 ---
 

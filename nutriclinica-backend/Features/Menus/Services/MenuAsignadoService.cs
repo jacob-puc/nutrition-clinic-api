@@ -15,13 +15,85 @@ public class MenuAsignadoService : IMenuAsignadoService
 
     private readonly ApplicationDbContext _context;
     private readonly IValidator<CrearMenuAsignadoDto> _crearValidator;
+    private readonly IValidator<ActualizarMenuAsignadoDto> _actualizarValidator;
+    private readonly IValidator<MenuAsignadoFiltroDto> _filtroValidator;
 
     public MenuAsignadoService(
         ApplicationDbContext context,
-        IValidator<CrearMenuAsignadoDto> crearValidator)
+        IValidator<CrearMenuAsignadoDto> crearValidator,
+        IValidator<ActualizarMenuAsignadoDto> actualizarValidator,
+        IValidator<MenuAsignadoFiltroDto> filtroValidator)
     {
         _context = context;
         _crearValidator = crearValidator;
+        _actualizarValidator = actualizarValidator;
+        _filtroValidator = filtroValidator;
+    }
+
+    public async Task<MenuAsignadoRespuestaDto> ObtenerMenuAsignadoPorIdAsync(Guid menuId)
+    {
+        var existe = await _context.MenusAsignados
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == menuId)
+            ?? throw new KeyNotFoundException(
+                $"No se encontró un menú asignado con ID: {menuId}");
+
+        return await CargarMenuAsync(menuId);
+    }
+
+    public async Task<IEnumerable<MenuAsignadoRespuestaDto>> ObtenerMenuAsignadoAsync(
+        MenuAsignadoFiltroDto filtro)
+    {
+        await _filtroValidator.ValidateAndThrowAsync(filtro);
+
+        var query = _context.MenusAsignados.AsNoTracking().AsQueryable();
+
+        if (filtro.SoloActivos ?? true)
+        {
+            query = query.Where(m => m.IsActive);
+        }
+
+        if (filtro.PacienteId.HasValue)
+        {
+            query = query.Where(m => m.PacienteId == filtro.PacienteId.Value);
+        }
+
+        if (filtro.Estado.HasValue)
+        {
+            query = query.Where(m => m.Estado == filtro.Estado.Value);
+        }
+
+        if (filtro.FechaDesde.HasValue)
+        {
+            query = query.Where(m => m.FechaInicio >= filtro.FechaDesde.Value);
+        }
+
+        if (filtro.FechaHasta.HasValue)
+        {
+            query = query.Where(m => m.FechaInicio <= filtro.FechaHasta.Value);
+        }
+
+        var menus = filtro.OrdenarPor?.ToLowerInvariant() switch
+        {
+            "fechainicio" => await (filtro.Descendente
+                ? query.OrderByDescending(m => m.FechaInicio).ToListAsync()
+                : query.OrderBy(m => m.FechaInicio).ToListAsync()),
+            "fechacreacion" => await (filtro.Descendente
+                ? query.OrderByDescending(m => m.FechaCreacion).ToListAsync()
+                : query.OrderBy(m => m.FechaCreacion).ToListAsync()),
+            _ => await (filtro.Descendente
+                ? query.OrderByDescending(m => m.Nombre).ToListAsync()
+                : query.OrderBy(m => m.Nombre).ToListAsync())
+        };
+
+        var resultado = new List<MenuAsignadoRespuestaDto>();
+
+        foreach (var menu in menus)
+        {
+            resultado.Add(await CargarMenuAsync(menu.Id));
+        }
+
+        return resultado;
     }
 
     public async Task<MenuAsignadoRespuestaDto> AsignarPlantillaAsync(CrearMenuAsignadoDto dto)
@@ -33,9 +105,6 @@ public class MenuAsignadoService : IMenuAsignadoService
         var plantilla = await _context.PlantillasMenu
             .AsNoTracking()
             .Include(p => p.Detalles)
-            .ThenInclude(d => d.Plato)
-            .ThenInclude(p => p.Detalles)
-            .ThenInclude(d => d.Alimento)
             .FirstOrDefaultAsync(p => p.Id == dto.PlantillaMenuId)
             ?? throw new KeyNotFoundException(
                 $"No se encontró una plantilla con ID: {dto.PlantillaMenuId}");
@@ -67,11 +136,22 @@ public class MenuAsignadoService : IMenuAsignadoService
             IsActive = true
         };
 
-        menu.Detalles = ClonarDetallesDePlantilla(plantilla, menu.Id);
-
-        var copiasDePlato = CopiarPlatosDePlantilla(plantilla);
-
-        ReapuntarDetallesACopias(menu.Detalles, plantilla.Detalles, copiasDePlato);
+        menu.Detalles = plantilla.Detalles
+            .OrderBy(d => d.DiaSemana)
+            .ThenBy(d => d.TiempoComida)
+            .ThenBy(d => d.Orden)
+            .Select(d => new DetalleMenuAsignado
+            {
+                Id = Guid.NewGuid(),
+                MenuAsignadoId = menu.Id,
+                PlatoId = d.PlatoId,
+                DiaSemana = d.DiaSemana,
+                TiempoComida = d.TiempoComida,
+                Cantidad = d.Cantidad,
+                Indicaciones = d.Indicaciones,
+                Orden = d.Orden
+            })
+            .ToList();
 
         _context.MenusAsignados.Add(menu);
 
@@ -88,9 +168,6 @@ public class MenuAsignadoService : IMenuAsignadoService
         var original = await _context.MenusAsignados
             .AsNoTracking()
             .Include(m => m.Detalles)
-            .ThenInclude(d => d.Plato)
-            .ThenInclude(p => p.Detalles)
-            .ThenInclude(d => d.Alimento)
             .FirstOrDefaultAsync(m => m.Id == menuId)
             ?? throw new KeyNotFoundException($"No se encontró un menú asignado con ID: {menuId}");
 
@@ -113,8 +190,6 @@ public class MenuAsignadoService : IMenuAsignadoService
             IsActive = true
         };
 
-        var platosOriginales = CargarPlatosAgrupados(original.Detalles);
-
         copia.Detalles = original.Detalles
             .OrderBy(d => d.DiaSemana)
             .ThenBy(d => d.TiempoComida)
@@ -132,19 +207,6 @@ public class MenuAsignadoService : IMenuAsignadoService
             })
             .ToList();
 
-        var clonados = CopiarPlatosDeMenu(original.Detalles, platosOriginales);
-
-        foreach (var detalle in copia.Detalles)
-        {
-            var originalId = original.Detalles
-                .First(d => d.DiaSemana == detalle.DiaSemana
-                            && d.TiempoComida == detalle.TiempoComida
-                            && d.Orden == detalle.Orden)
-                .PlatoId;
-
-            detalle.PlatoId = clonados[originalId];
-        }
-
         _context.MenusAsignados.Add(copia);
 
         await _context.SaveChangesAsync();
@@ -152,116 +214,101 @@ public class MenuAsignadoService : IMenuAsignadoService
         return await CargarMenuAsync(copia.Id);
     }
 
-    private static List<DetalleMenuAsignado> ClonarDetallesDePlantilla(
-        PlantillaMenu plantilla,
-        Guid menuId)
+    public async Task<MenuAsignadoRespuestaDto> ActualizarMenuAsignadoAsync(
+        Guid menuId,
+        ActualizarMenuAsignadoDto dto)
     {
-        return plantilla.Detalles
-            .OrderBy(d => d.DiaSemana)
-            .ThenBy(d => d.TiempoComida)
-            .ThenBy(d => d.Orden)
-            .Select(d => new DetalleMenuAsignado
+        await _actualizarValidator.ValidateAndThrowAsync(dto);
+
+        var menu = await _context.MenusAsignados
+            .FirstOrDefaultAsync(m => m.Id == menuId)
+            ?? throw new KeyNotFoundException(
+                $"No se encontró un menú asignado con ID: {menuId}");
+
+        if (menu.Estado == MenuAsignadoEstado.Finalizado)
+        {
+            throw new ConflictException(
+                "Un plan finalizado no se modifica. Duplica el plan para hacer cambios.");
+        }
+
+        if (menu.Estado != MenuAsignadoEstado.Borrador
+            && dto.FechaInicio.HasValue
+            && dto.FechaInicio.Value != menu.FechaInicio)
+        {
+            throw new ConflictException(
+                "La fecha de inicio solo se puede cambiar mientras el plan está en borrador.");
+        }
+
+        await ValidarPlatosAsync(dto.Detalles.Select(d => d.PlatoId));
+        ValidarDuplicadosDeComida(dto.Detalles);
+
+        menu.Nombre = dto.Nombre.Trim();
+        menu.Descripcion = string.IsNullOrWhiteSpace(dto.Descripcion)
+            ? null
+            : dto.Descripcion.Trim();
+        menu.ObjetivoCalorico = dto.ObjetivoCalorico;
+        menu.Estado = dto.Estado;
+
+        if (dto.FechaInicio.HasValue)
+        {
+            menu.FechaInicio = dto.FechaInicio.Value;
+        }
+
+        var existentes = await _context.DetallesMenuAsignado
+            .Where(d => d.MenuAsignadoId == menuId)
+            .ToListAsync();
+
+        var porId = existentes.ToDictionary(d => d.Id);
+        var conservados = new List<DetalleMenuAsignado>();
+        var orden = 0;
+
+        foreach (var detalleDto in dto.Detalles
+                     .OrderBy(d => d.DiaSemana)
+                     .ThenBy(d => d.TiempoComida)
+                     .ThenBy(d => d.Orden))
+        {
+            var existente = detalleDto.Id.HasValue
+                ? porId.GetValueOrDefault(detalleDto.Id.Value)
+                : null;
+
+            if (existente is not null)
             {
-                Id = Guid.NewGuid(),
-                MenuAsignadoId = menuId,
-                PlatoId = d.PlatoId,
-                DiaSemana = d.DiaSemana,
-                TiempoComida = d.TiempoComida,
-                Cantidad = d.Cantidad,
-                Indicaciones = d.Indicaciones,
-                Orden = d.Orden
-            })
-            .ToList();
-    }
-
-    private Dictionary<Guid, Guid> CopiarPlatosDePlantilla(PlantillaMenu plantilla)
-    {
-        var platosUnicos = plantilla.Detalles
-            .Select(d => d.Plato)
-            .GroupBy(p => p.Id)
-            .ToDictionary(g => g.Key, g => g.First());
-
-        var copias = new Dictionary<Guid, Guid>();
-
-        foreach (var (idOriginal, plato) in platosUnicos)
-        {
-            var copia = CopiarPlato(plato);
-            copias[idOriginal] = copia.Id;
-            _context.Platos.Add(copia);
-        }
-
-        return copias;
-    }
-
-    private Dictionary<Guid, Guid> CopiarPlatosDeMenu(
-        ICollection<DetalleMenuAsignado> detalles,
-        Dictionary<Guid, Plato> platosOriginales)
-    {
-        var copias = new Dictionary<Guid, Guid>();
-
-        foreach (var idOriginal in detalles.Select(d => d.PlatoId).Distinct())
-        {
-            var copia = CopiarPlato(platosOriginales[idOriginal]);
-            copias[idOriginal] = copia.Id;
-            _context.Platos.Add(copia);
-        }
-
-        return copias;
-    }
-
-    private static Plato CopiarPlato(Plato original)
-    {
-        var copia = new Plato
-        {
-            Id = Guid.NewGuid(),
-            Nombre = original.Nombre,
-            Descripcion = original.Descripcion,
-            ImagenUrl = original.ImagenUrl,
-            NutricionistaId = original.NutricionistaId,
-            FechaCreacion = DateTime.UtcNow,
-            IsActive = true
-        };
-
-        copia.Detalles = original.Detalles
-            .OrderBy(d => d.Orden)
-            .Select(d => new DetallePlato
+                existente.PlatoId = detalleDto.PlatoId;
+                existente.DiaSemana = detalleDto.DiaSemana;
+                existente.TiempoComida = detalleDto.TiempoComida;
+                existente.Cantidad = detalleDto.Cantidad;
+                existente.Indicaciones = string.IsNullOrWhiteSpace(detalleDto.Indicaciones)
+                    ? null
+                    : detalleDto.Indicaciones.Trim();
+                existente.Orden = orden++;
+                conservados.Add(existente);
+            }
+            else
             {
-                Id = Guid.NewGuid(),
-                PlatoId = copia.Id,
-                AlimentoId = d.AlimentoId,
-                RacionGramos = d.RacionGramos,
-                Orden = d.Orden
-            })
-            .ToList();
-
-        return copia;
-    }
-
-    private static void ReapuntarDetallesACopias(
-        ICollection<DetalleMenuAsignado> detalles,
-        ICollection<DetallePlantillaMenu> detallesPlantilla,
-        Dictionary<Guid, Guid> copias)
-    {
-        var originales = detallesPlantilla
-            .OrderBy(d => d.DiaSemana)
-            .ThenBy(d => d.TiempoComida)
-            .ThenBy(d => d.Orden)
-            .ToList();
-
-        for (var i = 0; i < detalles.Count; i++)
-        {
-            var detalle = detalles.ElementAt(i);
-            detalle.PlatoId = copias[originales[i].PlatoId];
+                conservados.Add(new DetalleMenuAsignado
+                {
+                    Id = Guid.NewGuid(),
+                    MenuAsignadoId = menuId,
+                    PlatoId = detalleDto.PlatoId,
+                    DiaSemana = detalleDto.DiaSemana,
+                    TiempoComida = detalleDto.TiempoComida,
+                    Cantidad = detalleDto.Cantidad,
+                    Indicaciones = string.IsNullOrWhiteSpace(detalleDto.Indicaciones)
+                        ? null
+                        : detalleDto.Indicaciones.Trim(),
+                    Orden = orden++
+                });
+            }
         }
-    }
 
-    private static Dictionary<Guid, Plato> CargarPlatosAgrupados(
-        ICollection<DetalleMenuAsignado> detalles)
-    {
-        return detalles
-            .Select(d => d.Plato)
-            .GroupBy(p => p.Id)
-            .ToDictionary(g => g.Key, g => g.First());
+        var eliminados = existentes.Where(e => !conservados.Contains(e)).ToList();
+
+        _context.DetallesMenuAsignado.RemoveRange(eliminados);
+        _context.DetallesMenuAsignado.AddRange(conservados.Where(c => !existentes.Contains(c)));
+
+        await _context.SaveChangesAsync();
+
+        return await CargarMenuAsync(menuId);
     }
 
     private async Task<MenuAsignadoRespuestaDto> CargarMenuAsync(Guid menuId)
@@ -298,7 +345,7 @@ public class MenuAsignadoService : IMenuAsignadoService
 
     private static MenuAsignadoRespuestaDto MapearMenu(
         MenuAsignado menu,
-        List<DetalleMenuAsignado> detalles,
+         List<DetalleMenuAsignado> detalles,
         string? pacienteNombre,
         string? plantillaNombre)
     {
@@ -399,6 +446,42 @@ public class MenuAsignadoService : IMenuAsignadoService
         {
             throw new KeyNotFoundException(
                 $"No se encontró un paciente activo con ID: {pacienteId}");
+        }
+    }
+
+    private async Task ValidarPlatosAsync(IEnumerable<Guid> platoIds)
+    {
+        var ids = platoIds.Distinct().ToList();
+
+        var encontrados = await _context.Platos
+            .AsNoTracking()
+            .Where(p => ids.Contains(p.Id) && p.IsActive)
+            .Select(p => p.Id)
+            .ToHashSetAsync();
+
+        var faltantes = ids.Except(encontrados).ToList();
+
+        if (faltantes.Any())
+        {
+            throw new KeyNotFoundException(
+                $"No se encontraron los siguientes platos activos: {string.Join(", ", faltantes)}");
+        }
+    }
+
+    private static void ValidarDuplicadosDeComida(List<ActualizarDetallesMenuAsignadoDto> detalles)
+    {
+        var duplicados = detalles
+            .GroupBy(d => new { d.DiaSemana, d.TiempoComida, d.PlatoId })
+            .Where(g => g.Count() > 1)
+            .Select(g => $"{g.Key.DiaSemana} / {g.Key.TiempoComida}")
+            .ToList();
+
+        if (duplicados.Any())
+        {
+            throw new ValidationException(
+                "El mismo plato aparece más de una vez en el mismo tiempo de comida: "
+                + string.Join(", ", duplicados)
+                + ". Usa una sola línea con la cantidad sumada.");
         }
     }
 }

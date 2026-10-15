@@ -251,14 +251,24 @@ public class PlatoService : IPlatoService
             throw new ConflictException("El plato ya está eliminado.");
         }
 
-        var enUso = await _context.DetallesPlantillaMenu
+        var enPlantilla = await _context.DetallesPlantillaMenu
             .AnyAsync(d => d.PlatoId == platoId);
 
-        if (enUso)
+        if (enPlantilla)
         {
             throw new ConflictException(
                 "No se puede eliminar el plato porque está asignado a una plantilla de menú. "
                 + "Quítalo de la plantilla primero.");
+        }
+
+        var enPlanDePaciente = await _context.DetallesMenuAsignado
+            .AnyAsync(d => d.PlatoId == platoId && d.MenuAsignado.IsActive);
+
+        if (enPlanDePaciente)
+        {
+            throw new ConflictException(
+                "No se puede eliminar el plato porque está en el plan activo de un paciente. "
+                + "Quítalo del plan primero.");
         }
 
         plato.IsActive = false;
