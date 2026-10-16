@@ -311,6 +311,43 @@ public class MenuAsignadoService : IMenuAsignadoService
         return await CargarMenuAsync(menuId);
     }
 
+    public async Task RestaurarMenuAsignadoAsync(Guid menuId)
+    {
+        var menuAsignado = await _context.MenusAsignados
+            .FirstOrDefaultAsync(p => p.Id == menuId)
+            ?? throw new KeyNotFoundException($"No se encontró el menú asignado con ID: {menuId}");
+
+        if (menuAsignado.IsActive)
+        {
+            throw new ConflictException("El menú asignado ya está activo.");
+        }
+
+        menuAsignado.IsActive = true;
+        await _context.SaveChangesAsync();
+
+    }
+
+    public async Task EliminarMenuAsignadoAsync(Guid menuId)
+    {
+        var menuAsignado = await _context.MenusAsignados
+            .FirstOrDefaultAsync(m => m.Id == menuId)
+            ?? throw new KeyNotFoundException($"No se encontró el menú asignado con ID: {menuId}");
+
+        if (!menuAsignado.IsActive)
+        {
+            throw new ConflictException("El menú asignado ya está inactivo.");
+        }
+
+        if (menuAsignado.Estado == MenuAsignadoEstado.Activo)
+        {
+            throw new ConflictException("No se puede eliminar un menú asignado activo.");
+        }
+        
+        
+        menuAsignado.IsActive = false;
+        await _context.SaveChangesAsync();
+    }
+
     private async Task<MenuAsignadoRespuestaDto> CargarMenuAsync(Guid menuId)
     {
         var menu = await _context.MenusAsignados
@@ -343,6 +380,7 @@ public class MenuAsignadoService : IMenuAsignadoService
         return MapearMenu(menu, detalles, pacienteNombre, plantillaNombre);
     }
 
+    
     private static MenuAsignadoRespuestaDto MapearMenu(
         MenuAsignado menu,
          List<DetalleMenuAsignado> detalles,

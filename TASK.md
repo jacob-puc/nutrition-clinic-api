@@ -119,11 +119,13 @@ La personalización por paciente vive en `Cantidad` e `Indicaciones` del detalle
 - [x] Registro en DI
 
 **Pendiente del usuario → `tasks-user.md`:**
-- [ ] **Tarea 1**: 2 métodos restantes del servicio (`RestaurarMenuAsignadoAsync` y
-  `EliminarMenuAsignadoAsync`, este con regla 409 si el plan está `Activo`). El build marca
-  **exactamente 2 errores CS0535**, que desaparecen al implementarlos
-- [ ] **Tarea 2**: `MenuAsignadosController` (7 endpoints)
+- [x] **Tarea 1**: `RestaurarMenuAsignadoAsync` y `EliminarMenuAsignadoAsync` (con regla 409 si
+  el plan está `Activo`) — **hechos por el usuario**
+- [x] **Tarea 2**: `MenuAsignadosController` (7 endpoints) — **hecho por el usuario**, con
+  correcciones aplicadas (ruta relativa `asignar`, `dto?.Nombre`, `ActionResult` en PATCH)
 - [ ] **Pruebas `.http`** (ejecución guiada conmigo, no asignada como tarea)
+
+**Estado: código del módulo COMPLETO. Build limpio — 0 errores, 0 advertencias.**
 
 **Reglas clínicas del módulo:**
 - `Estado`: `Borrador` → `Activo` → `Finalizado`

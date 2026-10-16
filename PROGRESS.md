@@ -13,8 +13,8 @@
 - ✅ **Upload de archivos** (fotos/documentos) vía Supabase Storage
 - ✅ **Catálogo de Alimentos** completo (24/24 pruebas manuales OK)
 - 🔄 **Plantillas de Menús** con capa `PLATO`: 14 endpoints funcionando y verificados
-- 🔄 **Menús Asignados**: servicio al 90 % (sin clonado de platos), faltan 2 métodos y el controller
-  → `tasks-user.md`
+- 🔄 **Menús Asignados**: **código completo** (servicio 7/7 métodos + controller de 7 endpoints),
+  build 0/0 — faltan pruebas `.http` en conjunto
 - ✅ **Base de datos:** Supabase (PostgreSQL) en `us-west-2`
 - ✅ **Despliegue:** Render (free tier)
 - ✅ **Repositorio:** https://github.com/jacob-puc/nutrition-clinic-api
@@ -35,7 +35,7 @@
 | Consultas | Consulta | 8 | ✅ |
 | Alimentos | Alimento | 6 (CRUD + restaurar) + imagen | ✅ 24/24 pruebas |
 | Menús | Plato, PlantillaMenu | 14 (2 controllers) | ✅ Verificado en vivo |
-| Menús Asignados | MenuAsignado | 2 (asignar, duplicar) | 🔄 Servicio al 90 %, faltan 2 métodos + controller |
+| Menús Asignados | MenuAsignado | 7 (controller del usuario) | ✅ Código completo, pendiente pruebas |
 
 ### Módulo de Menús — capa PLATO
 
@@ -82,11 +82,13 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
   implementado).
 - **`PlatoService.EliminarPlatoAsync`**: además del check de plantillas, devuelve **409** si el
   plato está en el plan activo de un paciente.
-- **Servicio completo salvo 2 métodos**: `ObtenerPorId`, `ObtenerLista` (filtros `PacienteId`,
-  `Estado`, `FechaDesde/Hasta`, `SoloActivos`, orden `nombre|fechainicio|fechacreacion`) y
-  `Actualizar` (reconciliado de detalles + reglas clínicas) están hechos.
-- **Pendiente del usuario**: `RestaurarMenuAsignadoAsync` y `EliminarMenuAsignadoAsync` (2 errores
-  CS0535) + `MenuAsignadosController` (7 endpoints) → `tasks-user.md`.
+- **Servicio completo**: `ObtenerPorId`, `ObtenerLista` (filtros `PacienteId`, `Estado`,
+  `FechaDesde/Hasta`, `SoloActivos`, orden `nombre|fechainicio|fechacreacion`), `Actualizar`
+  (reconciliado de detalles + reglas clínicas), `Restaurar` y `Eliminar` (escritos por el usuario).
+- **Controller `MenuAsignadosController`** (7 endpoints) escrito y corregido por el usuario
+  (ruta relativa `asignar`, `dto?.Nombre`, `ActionResult` en PATCH).
+- **Estado**: código del módulo **COMPLETO**, build **0 errores / 0 advertencias**. Pendiente
+  solo la validación con pruebas `.http` (guiada).
 
 ### Upload de archivos
 - **Almacenamiento**: Supabase Storage, consumido por su REST API directa
@@ -161,8 +163,7 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 
 ## Próximos pasos prioritarios (Backend)
 
-1. **Terminar `MenuAsignado`**: 2 métodos del servicio (`Restaurar`, `Eliminar`) y
-   `MenuAsignadosController` (→ detalle en `tasks-user.md`)
+1. **Pruebas `.http` de Menús Asignados** (ejecución guiada conmigo — código del módulo completo)
 2. **Pruebas `.http` del módulo Menús y Menús Asignados** (ejecución guiada)
 3. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
 4. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)

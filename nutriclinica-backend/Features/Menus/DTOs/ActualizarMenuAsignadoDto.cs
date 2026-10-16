@@ -9,5 +9,5 @@ public class ActualizarMenuAsignadoDto
     public decimal? ObjetivoCalorico { get; set; }
     public DateOnly? FechaInicio { get; set; }
     public MenuAsignadoEstado Estado { get; set; }
-    public List<ActualizarDetallesMenuAsignadoDto> Detalles { get; set; }
+    public List<ActualizarDetallesMenuAsignadoDto> Detalles { get; set; } = [];
 }
