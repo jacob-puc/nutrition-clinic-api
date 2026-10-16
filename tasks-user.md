@@ -1,8 +1,21 @@
-# Menús Asignados — módulo COMPLETO (faltan pruebas .http en conjunto)
+# Menús Asignados — módulo COMPLETO y VERIFICADO (2026-10-16)
 
-## ✅ Estado: código terminado
+## ✅ Estado: todas las pruebas pasaron
 
-Build limpio: **0 errores, 0 advertencias** (`dotnet build` desde `nutriclinica-backend/nutriclinica-backend`).
+Build limpio: **0 errores, 0 advertencias**. Pruebas en vivo completadas (asignar, sin-clonado,
+recálculo, alergia, duplicar, filtros, 9/9 reglas clínicas, 401/404/409/400). No quedan tareas
+pendientes en este módulo.
+
+**Pregunta abierta para ti (decisión de dominio):** `DELETE /api/plantillas-menu/{id}` de una
+plantilla **en uso por planes activos** hoy devuelve 204 (soft-delete sin check). Para los platos
+sí pusimos 409. ¿Quieres el mismo 409 para plantillas en uso, o se permite borrarla (los planes
+siguen funcionando porque sus detalles apuntan a platos, no a la plantilla)?
+
+### Errores que aparecieron durante las pruebas y quedaron resueltos
+- `PUT /api/platos/{id}` → **500** al reemplazar ingredientes sin enviar `Id` (bug mío del
+  reconciliado; corregido con `AddRange` explícito de detalles nuevos).
+- 400 en mis primeros PUTs de prueba: `detalles: []` — el validador exige al menos un plato
+  (el API estaba bien, fallaba mi payload de prueba).
 
 | Parte | Quién | Estado |
 |---|---|---|
@@ -38,7 +51,32 @@ Build limpio: **0 errores, 0 advertencias** (`dotnet build` desde `nutriclinica-
 
 ---
 
-## 🔬 Siguiente paso — pruebas `.http` (juntos, no es tarea tuya)
+## 🔬 Pruebas `.http` — COMPLETADAS (2026-10-16, ejecución guiada)
+
+Se ejecutaron en vivo con `dotnet run --urls "http://localhost:5036"` y quedaron todas en verde.
+El archivo `utriclinica-backend.http` puede actualizarse con estos escenarios cuando quieras:
+
+### Registro de lo probado
+
+| # | Escenario | Resultado |
+|---|---|---|
+| 1 | Asignar plantilla → macros cuadran (787.5 kcal) | ✅ 201 |
+| 2 | Editar plato del catálogo → el plan se actualiza solo (sin clonado) | ✅ 787.5→540→787.5 |
+| 3 | PUT plan ajustando porciones → recálculo (1312.5 kcal) | ✅ 200 |
+| 4 | Cambiar plato del plan (alergia) → 522.5 kcal | ✅ 200 |
+| 5 | Duplicar plan → copia en Borrador apuntando al catálogo | ✅ 200 |
+| 6 | PUT → Activo → Finalizado (transiciones) | ✅ 200 |
+| 7 | PUT con fecha distinta estando Activo | ✅ 409 |
+| 8 | PUT sobre plan Finalizado | ✅ 409 |
+| 9 | DELETE de plan Activo | ✅ 409 |
+| 10 | DELETE de plan Finalizado (soft-delete) | ✅ 204 |
+| 11 | PATCH restaurar (1ª vez / 2ª vez) | ✅ 200 / 409 |
+| 12 | Filtros: pacienteId, estado, fechaDesde/Hasta, orden, SoloActivos | ✅ |
+| 13 | 401 sin token y con token falso; 404 GUID inventado | ✅ |
+| 14 | PUT con mismo plato 2× en el mismo tiempo de comida | ✅ 400 |
+| 15 | PUT con platoId inexistente | ✅ 404 |
+| 16 | DELETE plato en uso (plantilla/plan activo) | ✅ 409 |
+| 17 | DELETE plantilla en uso por planes | ⚠️ 204 (sin check — pregunta abierta arriba) |
 
 ```bash
 cd nutriclinica-backend/nutriclinica-backend
@@ -59,17 +97,6 @@ Los 7 endpoints:
 | `PUT` | `/api/menu-asignados/{menuId:guid}` |
 | `PATCH` | `/api/menu-asignados/{menuId:guid}/restaurar` |
 | `DELETE` | `/api/menu-asignados/{menuId:guid}` |
-
-Escenarios con valor clínico (te digo qué esperar en cada respuesta):
-
-1. Asignar plantilla a paciente → macros cuadran. Cambiar el plato en el catálogo → **sí**
-   debe reflejarse en el plan (sin clonado, es lo esperado).
-2. `PUT` ajustando porciones → `CaloriasTotales` recalculado.
-3. Cambiar un plato en un día/tiempo → simula alergia detectada.
-4. Poner `Estado = Finalizado` y luego `PUT` → **409**.
-5. `DELETE` de un plan `Activo` → **409**; de uno `Finalizado` → 204; `PATCH /restaurar` → 200.
-6. Filtro por `pacienteId` → solo ese paciente. Rango de fechas → solo ese rango.
-7. 401 sin token, 404 con GUID inventado.
 
 ---
 

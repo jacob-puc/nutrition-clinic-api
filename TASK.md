@@ -123,9 +123,19 @@ La personalización por paciente vive en `Cantidad` e `Indicaciones` del detalle
   el plan está `Activo`) — **hechos por el usuario**
 - [x] **Tarea 2**: `MenuAsignadosController` (7 endpoints) — **hecho por el usuario**, con
   correcciones aplicadas (ruta relativa `asignar`, `dto?.Nombre`, `ActionResult` en PATCH)
-- [ ] **Pruebas `.http`** (ejecución guiada conmigo, no asignada como tarea)
+- [x] **Pruebas en vivo 2026-10-16** (ejecutadas por mí, no asignadas como tarea): asignar →
+  201 + macros cuadran; sin-clonado verificado (editar plato del catálogo → el plan se
+  actualiza solo); recálculo de porciones; cambiar plato por alergia; duplicar; filtros
+  (`pacienteId`, `estado`, fechas, orden, `SoloActivos`); 9/9 reglas clínicas (409s y
+  transiciones); 401/404/400 (plato duplicado en misma comida, plato inexistente, detalle vacío)
+- [x] **Bug corregido en la prueba**: `PUT /api/platos/{id}` devolvía **500** al reemplazar
+  ingredientes sin `Id` (`DbUpdateConcurrencyException`) — `AddRange` de detalles nuevos tras
+  condición imposible; corregido con el patrón de `PlantillaMenuService`
 
-**Estado: código del módulo COMPLETO. Build limpio — 0 errores, 0 advertencias.**
+**Pregunta abierta (decisión de dominio → usuario):** `DELETE plantilla` en uso por planes
+activos hoy devuelve **204** (no hay check; sí lo hay para platos). ¿Va 409 como el plato?
+
+**Estado: módulo COMPLETO y VERIFICADO. Build limpio — 0 errores, 0 advertencias.**
 
 **Reglas clínicas del módulo:**
 - `Estado`: `Borrador` → `Activo` → `Finalizado`

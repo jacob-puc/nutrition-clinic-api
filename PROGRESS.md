@@ -2,7 +2,7 @@
 
 ## Estado Actual: **API desplegada, Auth completo, Alimentos completo, módulo Menús en curso**
 
-**Última actualización:** 2026-10-15
+**Última actualización:** 2026-10-16
 
 ---
 
@@ -13,8 +13,8 @@
 - ✅ **Upload de archivos** (fotos/documentos) vía Supabase Storage
 - ✅ **Catálogo de Alimentos** completo (24/24 pruebas manuales OK)
 - 🔄 **Plantillas de Menús** con capa `PLATO`: 14 endpoints funcionando y verificados
-- 🔄 **Menús Asignados**: **código completo** (servicio 7/7 métodos + controller de 7 endpoints),
-  build 0/0 — faltan pruebas `.http` en conjunto
+- ✅ **Menús Asignados**: **módulo completo y verificado en vivo** (pruebas 2026-10-16:
+  7 endpoints + reglas clínicas + filtros + auth, todo OK)
 - ✅ **Base de datos:** Supabase (PostgreSQL) en `us-west-2`
 - ✅ **Despliegue:** Render (free tier)
 - ✅ **Repositorio:** https://github.com/jacob-puc/nutrition-clinic-api
@@ -35,7 +35,7 @@
 | Consultas | Consulta | 8 | ✅ |
 | Alimentos | Alimento | 6 (CRUD + restaurar) + imagen | ✅ 24/24 pruebas |
 | Menús | Plato, PlantillaMenu | 14 (2 controllers) | ✅ Verificado en vivo |
-| Menús Asignados | MenuAsignado | 7 (controller del usuario) | ✅ Código completo, pendiente pruebas |
+| Menús Asignados | MenuAsignado | 7 (controller del usuario) | ✅ Verificado en vivo (2026-10-16) |
 
 ### Módulo de Menús — capa PLATO
 
@@ -76,19 +76,28 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
   personalización por paciente vive en `Cantidad` e `Indicaciones` del detalle.
 - **`DuplicarMenuAsignadoAsync`**: copia un plan existente, opcionalmente a otro paciente, y lo
   deja en `Borrador`.
-- **Reglas clínicas**: un plan `Finalizado` no se edita (409, implementado en
-  `ActualizarMenuAsignadoAsync`); un plan `Activo` no se elimina (409, **pendiente** del usuario);
-  `PacienteId` no se cambia (el DTO no lo trae); `FechaInicio` solo cambia en `Borrador` (409,
-  implementado).
+- **Reglas clínicas** (todas verificadas en vivo 2026-10-16): un plan `Finalizado` no se edita
+  (409); un plan `Activo` no se elimina (409); `PacienteId` no se cambia (el DTO no lo trae);
+  `FechaInicio` solo cambia en `Borrador` (409); `Restaurar` reactiva soft-delete (409 si ya
+  estaba activo).
 - **`PlatoService.EliminarPlatoAsync`**: además del check de plantillas, devuelve **409** si el
   plato está en el plan activo de un paciente.
+- **Bug corregido 2026-10-16**: `ActualizarPlatoAsync` daba **500**
+  (`DbUpdateConcurrencyException`) al reemplazar ingredientes sin enviar `Id` — el `AddRange` de
+  detalles nuevos estaba tras una condición que nunca se cumplía (`!eliminados.Any() && !IsLoaded`);
+  EF adjuntaba las entidades nuevas como `Modified` → `UPDATE` con GUID inexistente → 0 filas.
+  Corregido con `AddRange(conservados.Where(c => !existentes.ContainsKey(c.Id)))` (mismo patrón
+  que `PlantillaMenuService` y `MenuAsignadoService`).
 - **Servicio completo**: `ObtenerPorId`, `ObtenerLista` (filtros `PacienteId`, `Estado`,
   `FechaDesde/Hasta`, `SoloActivos`, orden `nombre|fechainicio|fechacreacion`), `Actualizar`
   (reconciliado de detalles + reglas clínicas), `Restaurar` y `Eliminar` (escritos por el usuario).
 - **Controller `MenuAsignadosController`** (7 endpoints) escrito y corregido por el usuario
   (ruta relativa `asignar`, `dto?.Nombre`, `ActionResult` en PATCH).
-- **Estado**: código del módulo **COMPLETO**, build **0 errores / 0 advertencias**. Pendiente
-  solo la validación con pruebas `.http` (guiada).
+- **Estado**: módulo **COMPLETO y VERIFICADO en vivo** (2026-10-16), build **0/0**. Pruebas
+  cubrieron: asignar (201 + macros), sin-clonado (editar plato del catálogo → el plan se
+  actualiza solo), recálculo de porciones, cambiar plato (alergia), duplicar, filtros, 9/9
+  reglas clínicas, 401/404/409/400. **Pregunta abierta**: `DELETE plantilla` en uso por planes
+  activos hoy devuelve 204 (sin check) — decidir si va 409 como el plato.
 
 ### Upload de archivos
 - **Almacenamiento**: Supabase Storage, consumido por su REST API directa
@@ -163,14 +172,13 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 
 ## Próximos pasos prioritarios (Backend)
 
-1. **Pruebas `.http` de Menús Asignados** (ejecución guiada conmigo — código del módulo completo)
-2. **Pruebas `.http` del módulo Menús y Menús Asignados** (ejecución guiada)
-3. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
-4. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)
-5. **Paginación** en Citas y Consultas (ya hay DTOs, falta implementar)
-6. **Tests** (xUnit + Testcontainers)
-7. **Web a producción** → S3 + CloudFront + dominio
-8. **CI/CD** GitHub Actions (build + deploy automático a Render)
+1. **Decidir `DELETE plantilla` en uso**: ¿409 si planes activos la referencian? (hoy 204)
+2. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
+3. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)
+4. **Paginación** en Citas y Consultas (ya hay DTOs, falta implementar)
+5. **Tests** (xUnit + Testcontainers)
+6. **Web a producción** → S3 + CloudFront + dominio
+7. **CI/CD** GitHub Actions (build + deploy automático a Render)
 
 > **⚠️ Git**: solo `commit` local. **No hacer `push`** hasta que el usuario lo indique.
 

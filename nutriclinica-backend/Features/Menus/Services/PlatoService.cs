@@ -116,12 +116,7 @@ public class PlatoService : IPlatoService
         var eliminados = plato.Detalles.Where(d => !conservados.Contains(d)).ToList();
 
         _context.DetallesPlato.RemoveRange(eliminados);
-        plato.Detalles = conservados;
-
-        if (!eliminados.Any() && !_context.Entry(plato).Collection(p => p.Detalles).IsLoaded)
-        {
-            _context.DetallesPlato.AddRange(conservados);
-        }
+        _context.DetallesPlato.AddRange(conservados.Where(c => !existentes.ContainsKey(c.Id)));
 
         await _context.SaveChangesAsync();
 
