@@ -185,7 +185,7 @@ activos hoy devuelve **204** (no hay check; sí lo hay para platos). ¿Va 409 co
 
 ## 📝 Notas
 
-- **⚠️ Flujo de git**: solo hacer `commit` local. **NO hacer `push`** hasta que el usuario lo indique.
+- **⚠️ Flujo de git**: push hecho **2026-10-16** (`cbb29fb`). Subir solo cuando el usuario lo indique.
 - **Diseño del módulo Menús**: se descartó `DetallePlantillaMenu → Alimento` y se insertó la capa
   **PLATO** (`PlantillaMenu → DetallePlantillaMenu → Plato → DetallePlato → Alimento`), porque un menú
   clínico son platillos compuestos reutilizables y permite sustituirlos enteros por alergia.

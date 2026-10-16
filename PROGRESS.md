@@ -180,7 +180,8 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 6. **Web a producción** → S3 + CloudFront + dominio
 7. **CI/CD** GitHub Actions (build + deploy automático a Render)
 
-> **⚠️ Git**: solo `commit` local. **No hacer `push`** hasta que el usuario lo indique.
+> **⚠️ Git**: push hecho **2026-10-16** (`cbb29fb`, 8 commits: Alimentos, capa PLATO, Menús
+> Asignados y fix de `PUT /api/platos`). Regla: subir solo cuando el usuario lo indique.
 
 ---
 

@@ -103,3 +103,4 @@ Los 7 endpoints:
 ## ⚠️ Recordatorio de git
 
 Solo `git commit`. **No hacer `git push`** hasta que yo lo indique.
+(Último push: **2026-10-16**, commits `deb798a..cbb29fb`.)
