@@ -174,7 +174,8 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 
 ## Próximos pasos prioritarios (Backend)
 
-1. **Decidir `DELETE plantilla` en uso**: ¿409 si planes activos la referencian? (hoy 204)
+1. ~~**Decidir `DELETE plantilla` en uso**~~ → **Resuelto 2026-10-20**: 409 si está en uso;
+   `?forzar=true` permite el soft-delete igual (los planes conservan su asignación)
 2. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
 3. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)
 4. **Tests** (xUnit + Testcontainers)

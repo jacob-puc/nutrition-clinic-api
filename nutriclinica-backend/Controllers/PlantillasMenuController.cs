@@ -55,9 +55,9 @@ public class PlantillasMenuController : ControllerBase
         return Ok();
     }
     [HttpDelete("{plantillaId:guid}")]
-    public async Task<ActionResult> EliminarPlantilla(Guid plantillaId)
+    public async Task<ActionResult> EliminarPlantilla(Guid plantillaId, [FromQuery] bool forzar = false)
     {
-        await _plantillaMenuService.EliminarPlantillaAsync(plantillaId);
+        await _plantillaMenuService.EliminarPlantillaAsync(plantillaId, forzar);
         return NoContent();
     }
     

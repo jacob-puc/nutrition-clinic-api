@@ -132,8 +132,11 @@ La personalización por paciente vive en `Cantidad` e `Indicaciones` del detalle
   ingredientes sin `Id` (`DbUpdateConcurrencyException`) — `AddRange` de detalles nuevos tras
   condición imposible; corregido con el patrón de `PlantillaMenuService`
 
-**Pregunta abierta (decisión de dominio → usuario):** `DELETE plantilla` en uso por planes
-activos hoy devuelve **204** (no hay check; sí lo hay para platos). ¿Va 409 como el plato?
+**Pregunta de dominio CERRADA (decisión del usuario, 2026-10-20):** `DELETE plantilla` en uso por
+planes ahora devuelve **409** con el conteo de planes y el hint de `forzar=true`. Con
+`?forzar=true` se soft-deletea igual: los planes **conservan su asignación** (sus detalles apuntan
+a platos) y la plantilla solo desaparece del catálogo. Verificado en vivo (8/8 OK, ver
+`tasks-user.md`).
 
 **Estado: módulo COMPLETO y VERIFICADO. Build limpio — 0 errores, 0 advertencias.**
 

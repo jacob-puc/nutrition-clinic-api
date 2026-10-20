@@ -6,10 +6,10 @@ Build limpio: **0 errores, 0 advertencias**. Pruebas en vivo completadas (asigna
 recálculo, alergia, duplicar, filtros, 9/9 reglas clínicas, 401/404/409/400). No quedan tareas
 pendientes en este módulo.
 
-**Pregunta abierta para ti (decisión de dominio):** `DELETE /api/plantillas-menu/{id}` de una
-plantilla **en uso por planes activos** hoy devuelve 204 (soft-delete sin check). Para los platos
-sí pusimos 409. ¿Quieres el mismo 409 para plantillas en uso, o se permite borrarla (los planes
-siguen funcionando porque sus detalles apuntan a platos, no a la plantilla)?
+**✅ RESUELTA (2026-10-20):** `DELETE /api/plantillas-menu/{id}` de una plantilla **en uso por
+planes** ahora devuelve **409** con el conteo de planes y el hint: `forzar=true`. Si se fuerza, la
+plantilla se soft-deletea igual: los planes conservan su asignación (sus detalles apuntan a
+platos, no a la plantilla) y ella solo desaparece del catálogo de menús.
 
 ### Errores que aparecieron durante las pruebas y quedaron resueltos
 - `PUT /api/platos/{id}` → **500** al reemplazar ingredientes sin enviar `Id` (bug mío del
@@ -76,7 +76,7 @@ El archivo `utriclinica-backend.http` puede actualizarse con estos escenarios cu
 | 14 | PUT con mismo plato 2× en el mismo tiempo de comida | ✅ 400 |
 | 15 | PUT con platoId inexistente | ✅ 404 |
 | 16 | DELETE plato en uso (plantilla/plan activo) | ✅ 409 |
-| 17 | DELETE plantilla en uso por planes | ⚠️ 204 (sin check — pregunta abierta arriba) |
+| 17 | DELETE plantilla en uso por planes | ✅ Resuelto 2026-10-20: ahora 409 + `forzar=true` |
 
 ```bash
 cd nutriclinica-backend/nutriclinica-backend
@@ -131,6 +131,40 @@ En React esto se traduce en: `res.totalPaginas` para los controles de paginació
 
 **Quedan sin paginar a propósito:** expediente por paciente y consulta por cita (listas acotadas
 de un solo paciente).
+
+---
+
+# 🚫 Plantilla en uso: 409 + `forzar=true` — COMPLETADO (2026-10-20)
+
+**Estado: 8/8 pruebas en verde.** Build 0/0. Pruebas en vivo contra `https://localhost:7140`
+(servidor reiniciado con el código nuevo). La BD quedó **como estaba** (plantilla restaurada,
+los 2 planes de Luis intactos, sin datos de prueba residuales).
+
+**Regla implementada** (`PlantillaMenuService.EliminarPlantillaAsync`, mío):
+- `DELETE /api/plantillas-menu/{id}` de una plantilla en uso por planes (no eliminados) →
+  **409** con el conteo: *"No se puede eliminar la plantilla porque está en uso por N planes de
+  pacientes. Envía forzar=true para eliminarla igual..."*
+- `DELETE /api/plantillas-menu/{id}?forzar=true` → **204**: soft-delete igual. Los planes
+  **conservan su asignación** (sus detalles apuntan a platos, no a la plantilla) y ella solo
+  desaparece del catálogo.
+- Cambio mínimo en el endpoint (1 línea tuya para revisar): el action `EliminarPlantilla` ahora
+  acepta `[FromQuery] bool forzar = false` y se lo pasa al servicio.
+
+### Registro de lo probado
+
+| # | Escenario | Resultado |
+|---|---|---|
+| 1 | DELETE plantilla en uso sin forzar → 409 + mensaje con conteo | ✅ |
+| 2 | Los planes quedan intactos tras el 409 | ✅ 2 planes |
+| 3 | DELETE `?forzar=true` | ✅ 204 |
+| 4 | La plantilla desaparece del catálogo de menús | ✅ |
+| 5 | Plan `Finalizado` con su plantilla eliminada → sigue respondiendo con sus detalles | ✅ 200, 2 detalles |
+| 6 | Asignar un plan nuevo con la plantilla eliminada | ✅ 409 |
+| 7 | DELETE de una plantilla inexistente | ✅ 404 |
+| 8 | PATCH restaurar → vuelve al catálogo | ✅ 200 |
+
+> Nota: un primer intento del TEST 6 dio 400 por mi payload de prueba (sin `nombre`, que exige el
+> validador) — con el payload completo el servicio respondió el 409 correcto.
 
 ---
 

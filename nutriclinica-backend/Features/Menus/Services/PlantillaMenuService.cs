@@ -287,7 +287,7 @@ public class PlantillaMenuService : IPlantillaMenuService
         await _context.SaveChangesAsync();
     }
 
-    public async Task EliminarPlantillaAsync(Guid plantillaId)
+    public async Task EliminarPlantillaAsync(Guid plantillaId, bool forzar = false)
     {
         var plantilla = await _context.PlantillasMenu
             .FirstOrDefaultAsync(p => p.Id == plantillaId)
@@ -296,6 +296,21 @@ public class PlantillaMenuService : IPlantillaMenuService
         if (!plantilla.IsActive)
         {
             throw new ConflictException("La plantilla ya está eliminada.");
+        }
+
+        if (!forzar)
+        {
+            var enUso = await _context.MenusAsignados
+                .CountAsync(m => m.PlantillaMenuId == plantillaId && m.IsActive);
+
+            if (enUso > 0)
+            {
+                var planes = enUso == 1 ? "1 plan de paciente" : $"{enUso} planes de pacientes";
+                throw new ConflictException(
+                    $"No se puede eliminar la plantilla porque está en uso por {planes}. "
+                    + "Envía forzar=true para eliminarla igual: los planes conservan su asignación "
+                    + "y solo desaparece del catálogo de menús.");
+            }
         }
 
         plantilla.IsActive = false;

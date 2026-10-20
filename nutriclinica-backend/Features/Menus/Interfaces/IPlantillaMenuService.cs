@@ -10,5 +10,5 @@ public interface IPlantillaMenuService
     Task<IEnumerable<PlantillaMenuRespuestaDto>> ObtenerPlantillasAsync(PlantillaMenuFiltroDto filtro);
     Task<PlantillaMenuRespuestaDto> DuplicarPlantillaAsync(Guid plantillaId, string? nombreNuevo);
     Task RestaurarPlantillaAsync(Guid plantillaId);
-    Task EliminarPlantillaAsync(Guid plantillaId);
+    Task EliminarPlantillaAsync(Guid plantillaId, bool forzar = false);
 }
