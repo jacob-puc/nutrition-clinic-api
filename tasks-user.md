@@ -168,6 +168,40 @@ los 2 planes de Luis intactos, sin datos de prueba residuales).
 
 ---
 
+# 🧹 Borrado limpio de media (sin huérfanos) — COMPLETADO (2026-10-20)
+
+**Estado: fix implementado, verificado en vivo y auditoría de buckets sin huérfanos.** Build 0/0.
+
+**El problema:** `DELETE /api/pacientes/{id}/fotos/{fotoId}` y `.../documentos/{docId}` solo
+borraban el registro de la BD — el archivo seguía en Supabase Storage sin nada que lo
+referenciara (huérfano: ocupa espacio y, peor, la foto del paciente sigue existiendo "borrada").
+
+**La solución** (`ExpedienteMediaService`, mío):
+- `EliminarFotoAsync` / `EliminarDocumentoAsync` ahora **borran el archivo del bucket antes de
+  borrar el registro**.
+- Helper `ExtraerRutaDelBucket` que decide la ruta a borrar: si el valor guardado es una ruta
+  directa (documentos) la usa tal cual; si es URL pública o firmada **de nuestros buckets** extrae
+  la ruta; si es una URL externa (ej. un link pegado) **no toca nada**.
+- Best-effort: si el Storage falla, se registra un warning y el borrado clínico **no se bloquea**.
+
+### Registro de lo probado (en vivo, `https://localhost:7140`)
+
+| # | Escenario | Resultado |
+|---|---|---|
+| 1 | Subir foto (PNG 1×1) → URL pública responde 200 | ✅ |
+| 2 | DELETE registro → 204; archivo **eliminado del origen** del bucket (verificado con listado directo: 0 archivos) | ✅ |
+| 3 | Subir documento (PDF) → DELETE → archivo eliminado del bucket privado | ✅ |
+| 4 | Auditoría: listar ambos buckets completos → **0 archivos, 0 huérfanos** | ✅ |
+
+> **Aprendizaje para la defensa:** la URL pública de un archivo borrado puede seguir devolviendo
+> **200 durante unos minutos** — es la **caché del CDN** de Supabase, no el archivo. La forma
+> correcta de verificar es el listado directo del bucket (`POST /storage/v1/object/list/{bucket}`).
+
+> Nota del contrato: `DELETE` de foto/documento sigue devolviendo el mismo resultado al cliente;
+> el borrado del archivo es transparente para el frontend.
+
+---
+
 ## ⚠️ Recordatorio de git
 
 Solo `git commit`. **No hacer `git push`** hasta que yo lo indique.

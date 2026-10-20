@@ -17,6 +17,8 @@
   7 endpoints + reglas clínicas + filtros + auth, todo OK)
 - ✅ **Paginación en Citas y Consultas**: envelope `{totalRegistros, pagina, tamanoPagina,
   totalPaginas, datos}` con `?pagina=&tamanoPagina=` (2026-10-20: 9/9 pruebas OK)
+- ✅ **Borrado limpio de media**: eliminar foto/documento también borra el archivo de Supabase
+  Storage — sin huérfanos (2026-10-20, verificado en vivo + auditoría de buckets)
 - ✅ **Base de datos:** Supabase (PostgreSQL) en `us-west-2`
 - ✅ **Despliegue:** Render (free tier)
 - ✅ **Repositorio:** https://github.com/jacob-puc/nutrition-clinic-api
@@ -177,7 +179,9 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 1. ~~**Decidir `DELETE plantilla` en uso**~~ → **Resuelto 2026-10-20**: 409 si está en uso;
    `?forzar=true` permite el soft-delete igual (los planes conservan su asignación)
 2. ~~**Definir `Supabase__StorageKey` en Render**~~ → **Definida por el usuario (2026-10-20)**
-3. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)
+3. ~~**Borrar el archivo del bucket al eliminar un registro**~~ → **Resuelto 2026-10-20**:
+   `EliminarFotoAsync`/`EliminarDocumentoAsync` borran también el archivo; auditoría de ambos
+   buckets sin huérfanos
 4. **Tests** (xUnit + Testcontainers) — *pospuesto por decisión del usuario (2026-10-20)*
 5. **Web a producción** → S3 + CloudFront + dominio
 6. **CI/CD** GitHub Actions (build + deploy automático a Render)

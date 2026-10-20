@@ -20,6 +20,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
     private readonly IValidator<ActualizarDocumentoDto> _actualizarDocumentoValidator;
     private readonly IValidator<SubirFotoDto> _subirFotoValidator;
     private readonly IValidator<SubirDocumentoDto> _subirDocumentoValidator;
+    private readonly ILogger<ExpedienteMediaService> _logger;
 
     public ExpedienteMediaService(
         ApplicationDbContext context,
@@ -30,7 +31,8 @@ public class ExpedienteMediaService : IExpedienteMediaService
         IValidator<CrearDocumentoDto> crearDocumentoValidator,
         IValidator<ActualizarDocumentoDto> actualizarDocumentoValidator,
         IValidator<SubirFotoDto> subirFotoValidator,
-        IValidator<SubirDocumentoDto> subirDocumentoValidator)
+        IValidator<SubirDocumentoDto> subirDocumentoValidator,
+        ILogger<ExpedienteMediaService> logger)
     {
         _context = context;
         _storageService = storageService;
@@ -41,6 +43,7 @@ public class ExpedienteMediaService : IExpedienteMediaService
         _actualizarDocumentoValidator = actualizarDocumentoValidator;
         _subirFotoValidator = subirFotoValidator;
         _subirDocumentoValidator = subirDocumentoValidator;
+        _logger = logger;
     }
 
     public async Task<FotoRespuestaDto> RegistrarFotoAsync(Guid pacienteId, CrearFotoDto dto)
@@ -158,6 +161,8 @@ public class ExpedienteMediaService : IExpedienteMediaService
             .FirstOrDefaultAsync(f => f.Id == fotoId && f.PacienteId == pacienteId)
             ?? throw new KeyNotFoundException("No se encontró la foto de seguimiento");
 
+        await EliminarArchivoDelBucketAsync(_storageConfig.BucketMedia, foto.UrlFoto);
+
         _context.FotosSeguimiento.Remove(foto);
         await _context.SaveChangesAsync();
     }
@@ -249,6 +254,8 @@ public class ExpedienteMediaService : IExpedienteMediaService
             .FirstOrDefaultAsync(d => d.Id == documentoId && d.PacienteId == pacienteId)
             ?? throw new KeyNotFoundException("No se encontró el documento del paciente");
 
+        await EliminarArchivoDelBucketAsync(_storageConfig.BucketDocumentos, documento.UrlDocumento);
+
         _context.DocumentosPaciente.Remove(documento);
         await _context.SaveChangesAsync();
     }
@@ -293,6 +300,67 @@ public class ExpedienteMediaService : IExpedienteMediaService
         var ruta = $"{pacienteId}/{tipoRuta}/{Guid.NewGuid()}{ExtensionDesdeContentType(archivo.ContentType)}";
 
         return await _storageService.SubirArchivoAsync(bucket, ruta, buffer.ToArray(), archivo.ContentType);
+    }
+
+    private async Task EliminarArchivoDelBucketAsync(string bucket, string? valorGuardado)
+    {
+        var ruta = ExtraerRutaDelBucket(bucket, valorGuardado);
+
+        if (ruta is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _storageService.EliminarArchivoAsync(bucket, ruta);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "No se pudo eliminar el archivo {Ruta} del bucket {Bucket}. Quedará como huérfano.",
+                ruta,
+                bucket);
+        }
+    }
+
+    private static string? ExtraerRutaDelBucket(string bucket, string? valorGuardado)
+    {
+        if (string.IsNullOrWhiteSpace(valorGuardado))
+        {
+            return null;
+        }
+
+        if (!valorGuardado.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            && !valorGuardado.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return valorGuardado;
+        }
+
+        if (!Uri.TryCreate(valorGuardado, UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        var rutaAbsoluta = uri.AbsolutePath;
+
+        string[] prefijos =
+        [
+            $"/storage/v1/object/public/{bucket}/",
+            $"/storage/v1/object/sign/{bucket}/",
+            $"/storage/v1/object/{bucket}/"
+        ];
+
+        foreach (var prefijo in prefijos)
+        {
+            if (rutaAbsoluta.StartsWith(prefijo, StringComparison.OrdinalIgnoreCase))
+            {
+                return Uri.UnescapeDataString(rutaAbsoluta[prefijo.Length..]);
+            }
+        }
+
+        return null;
     }
 
     private static string ExtensionDesdeContentType(string contentType) => contentType.ToLower() switch

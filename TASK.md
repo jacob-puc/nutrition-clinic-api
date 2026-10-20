@@ -51,7 +51,8 @@
 - [x] `[RequestSizeLimit]` por endpoint (5 MB fotos, 10 MB documentos)
 - [x] Pruebas manuales en `utriclinica-backend.http`
 - [x] Verificación end-to-end local: subida real a ambos buckets, descarga 200, límite 5 MB → 400
-- [ ] Al eliminar un registro **no se borra el archivo** del bucket (queda huérfano)
+- [x] **Borrado limpio de media**: al eliminar una foto o un documento ahora también se borra
+  el archivo del bucket (2026-10-20). Auditoría de ambos buckets: sin huérfanos
 - [x] **`Supabase__StorageKey` definida en Render** por el usuario (2026-10-20)
 
 > **⚠️ No hacer `git push`** hasta que el usuario lo indique. Solo commit local.
