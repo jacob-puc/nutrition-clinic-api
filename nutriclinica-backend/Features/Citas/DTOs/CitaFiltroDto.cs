@@ -9,4 +9,6 @@ public class CitaFiltroDto
     public Guid? NutricionistaId { get; set; }
     public Guid? PacienteId { get; set; }
     public EstadoCita? Estado { get; set; }
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; } = 20;
 }

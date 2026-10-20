@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using nutriclinica_backend.Core.DTOs;
 using nutriclinica_backend.Core.Entities;
 using nutriclinica_backend.Core.Enums;
 using nutriclinica_backend.Core.Exceptions;
@@ -165,7 +166,7 @@ public class ConsultaService : IConsultaService
         return MapToDto(consulta, consulta.Paciente.NombreCompleto, consulta.Nutricionista.NombreCompleto);
     }
 
-    public async Task<IEnumerable<ConsultaRespuestaDto>> ObtenerConsultasAsync(ConsultaFiltroDto filtro)
+    public async Task<RespuestaPaginadaDto<ConsultaRespuestaDto>> ObtenerConsultasAsync(ConsultaFiltroDto filtro)
     {
         var query = _context.Consultas.AsNoTracking().AsQueryable();
 
@@ -204,6 +205,25 @@ public class ConsultaService : IConsultaService
             query = query.Where(c => c.FechaInicio <= filtro.Hasta.Value);
         }
 
+        var pagina = Math.Max(1, filtro.Pagina);
+        var tamanoPagina = Math.Clamp(filtro.TamanoPagina, 1, 100);
+        var totalRegistros = await query.CountAsync();
+
+        return new RespuestaPaginadaDto<ConsultaRespuestaDto>
+        {
+            TotalRegistros = totalRegistros,
+            Pagina = pagina,
+            TamanoPagina = tamanoPagina,
+            TotalPaginas = (int)Math.Ceiling(totalRegistros / (double)tamanoPagina),
+            Datos = await ListarConsultasAsync(query, pagina, tamanoPagina)
+        };
+    }
+
+    private async Task<List<ConsultaRespuestaDto>> ListarConsultasAsync(
+        IQueryable<Consulta> query,
+        int pagina,
+        int tamanoPagina)
+    {
         var proyeccion = await (
             from c in query
             join p in _context.Pacientes.AsNoTracking() on c.PacienteId equals p.Id
@@ -215,6 +235,8 @@ public class ConsultaService : IConsultaService
                 NutricionistaNombre = n.NombreCompleto
             })
             .OrderByDescending(x => x.Consulta.FechaInicio)
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
             .ToListAsync();
 
         return proyeccion
@@ -233,14 +255,20 @@ public class ConsultaService : IConsultaService
             throw new KeyNotFoundException($"No se encontró un paciente con ID: {pacienteId}");
         }
 
-        return await ObtenerConsultasAsync(new ConsultaFiltroDto { PacienteId = pacienteId });
+        return await ListarConsultasAsync(
+            _context.Consultas.AsNoTracking().Where(c => c.PacienteId == pacienteId),
+            pagina: 1,
+            tamanoPagina: int.MaxValue);
     }
 
     public async Task<ConsultaRespuestaDto?> ObtenerConsultaPorCitaAsync(Guid citaId)
     {
-        return await ObtenerConsultasAsync(new ConsultaFiltroDto { CitaId = citaId }) is { } lista
-            ? lista.FirstOrDefault()
-            : null;
+        var consultas = await ListarConsultasAsync(
+            _context.Consultas.AsNoTracking().Where(c => c.CitaId == citaId),
+            pagina: 1,
+            tamanoPagina: 1);
+
+        return consultas.FirstOrDefault();
     }
 
     private static ConsultaRespuestaDto MapToDto(

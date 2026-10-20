@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using nutriclinica_backend.Core.DTOs;
 using nutriclinica_backend.Features.Antropometria.DTOs;
 using nutriclinica_backend.Features.Antropometria.Interfaces;
 using nutriclinica_backend.Features.Consultas.DTOs;
@@ -22,7 +23,7 @@ public class ConsultasController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ConsultaRespuestaDto>>> ObtenerConsultas(
+    public async Task<ActionResult<RespuestaPaginadaDto<ConsultaRespuestaDto>>> ObtenerConsultas(
         [FromQuery] ConsultaFiltroDto filtro)
     {
         return Ok(await _consultaService.ObtenerConsultasAsync(filtro));

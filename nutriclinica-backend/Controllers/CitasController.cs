@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using nutriclinica_backend.Core.DTOs;
 using nutriclinica_backend.Features.Citas.DTOs;
 using nutriclinica_backend.Features.Citas.Interfaces;
 
@@ -18,7 +19,7 @@ public class CitasController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<CitaRespuestaDto>>> ObtenerCitas([FromQuery] CitaFiltroDto filtro)
+    public async Task<ActionResult<RespuestaPaginadaDto<CitaRespuestaDto>>> ObtenerCitas([FromQuery] CitaFiltroDto filtro)
     {
         return Ok(await _citaService.ObtenerCitasAsync(filtro));
     }

@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using nutriclinica_backend.Core.DTOs;
 using nutriclinica_backend.Core.Entities;
 using nutriclinica_backend.Core.Enums;
 using nutriclinica_backend.Core.Exceptions;
@@ -156,7 +157,7 @@ public class CitaService : ICitaService
         return MapToDto(cita, cita.Paciente.NombreCompleto, cita.Nutricionista.NombreCompleto, cita.Consulta?.Id);
     }
 
-    public async Task<IEnumerable<CitaRespuestaDto>> ObtenerCitasAsync(CitaFiltroDto filtro)
+    public async Task<RespuestaPaginadaDto<CitaRespuestaDto>> ObtenerCitasAsync(CitaFiltroDto filtro)
     {
         var query = _context.Citas.AsNoTracking().AsQueryable();
 
@@ -185,6 +186,10 @@ public class CitaService : ICitaService
             query = query.Where(c => c.FechaInicio <= filtro.Hasta.Value);
         }
 
+        var pagina = Math.Max(1, filtro.Pagina);
+        var tamanoPagina = Math.Clamp(filtro.TamanoPagina, 1, 100);
+        var totalRegistros = await query.CountAsync();
+
         var proyeccion = await (
             from c in query
             join p in _context.Pacientes.AsNoTracking() on c.PacienteId equals p.Id
@@ -197,11 +202,20 @@ public class CitaService : ICitaService
                 ConsultaId = c.Consulta == null ? (Guid?)null : c.Consulta.Id
             })
             .OrderBy(x => x.Cita.FechaInicio)
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
             .ToListAsync();
 
-        return proyeccion
-            .Select(x => MapToDto(x.Cita, x.PacienteNombre, x.NutricionistaNombre, x.ConsultaId))
-            .ToList();
+        return new RespuestaPaginadaDto<CitaRespuestaDto>
+        {
+            TotalRegistros = totalRegistros,
+            Pagina = pagina,
+            TamanoPagina = tamanoPagina,
+            TotalPaginas = (int)Math.Ceiling(totalRegistros / (double)tamanoPagina),
+            Datos = proyeccion
+                .Select(x => MapToDto(x.Cita, x.PacienteNombre, x.NutricionistaNombre, x.ConsultaId))
+                .ToList()
+        };
     }
 
     public async Task<IEnumerable<CitaRespuestaDto>> ObtenerCitasPorPacienteAsync(Guid pacienteId)

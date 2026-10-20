@@ -2,7 +2,7 @@
 
 ## Estado Actual: **API desplegada, Auth completo, Alimentos completo, módulo Menús en curso**
 
-**Última actualización:** 2026-10-16
+**Última actualización:** 2026-10-20
 
 ---
 
@@ -15,6 +15,8 @@
 - 🔄 **Plantillas de Menús** con capa `PLATO`: 14 endpoints funcionando y verificados
 - ✅ **Menús Asignados**: **módulo completo y verificado en vivo** (pruebas 2026-10-16:
   7 endpoints + reglas clínicas + filtros + auth, todo OK)
+- ✅ **Paginación en Citas y Consultas**: envelope `{totalRegistros, pagina, tamanoPagina,
+  totalPaginas, datos}` con `?pagina=&tamanoPagina=` (2026-10-20: 9/9 pruebas OK)
 - ✅ **Base de datos:** Supabase (PostgreSQL) en `us-west-2`
 - ✅ **Despliegue:** Render (free tier)
 - ✅ **Repositorio:** https://github.com/jacob-puc/nutrition-clinic-api
@@ -31,8 +33,8 @@
 | Antropometría | MedidaAntropometrica | 5 | ✅ |
 | Expediente Media | FotoSeguimiento, DocumentoPaciente | 12 (CRUD + subida) | ✅ |
 | Nutricionistas | Nutricionista | 5 | ✅ |
-| Citas | Cita | 6 | ✅ |
-| Consultas | Consulta | 8 | ✅ |
+| Citas | Cita | 6 | ✅ Con paginación |
+| Consultas | Consulta | 8 | ✅ Con paginación |
 | Alimentos | Alimento | 6 (CRUD + restaurar) + imagen | ✅ 24/24 pruebas |
 | Menús | Plato, PlantillaMenu | 14 (2 controllers) | ✅ Verificado en vivo |
 | Menús Asignados | MenuAsignado | 7 (controller del usuario) | ✅ Verificado en vivo (2026-10-16) |
@@ -175,10 +177,9 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 1. **Decidir `DELETE plantilla` en uso**: ¿409 si planes activos la referencian? (hoy 204)
 2. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
 3. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)
-4. **Paginación** en Citas y Consultas (ya hay DTOs, falta implementar)
-5. **Tests** (xUnit + Testcontainers)
-6. **Web a producción** → S3 + CloudFront + dominio
-7. **CI/CD** GitHub Actions (build + deploy automático a Render)
+4. **Tests** (xUnit + Testcontainers)
+5. **Web a producción** → S3 + CloudFront + dominio
+6. **CI/CD** GitHub Actions (build + deploy automático a Render)
 
 > **⚠️ Git**: push hecho **2026-10-16** (`cbb29fb`, 8 commits: Alimentos, capa PLATO, Menús
 > Asignados y fix de `PUT /api/platos`). Regla: subir solo cuando el usuario lo indique.

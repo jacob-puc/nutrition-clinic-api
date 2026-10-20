@@ -11,4 +11,6 @@ public class ConsultaFiltroDto
     public DateTime? Desde { get; set; }
     public DateTime? Hasta { get; set; }
     public bool? SoloSinCierre { get; set; }
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; } = 20;
 }

@@ -100,6 +100,40 @@ Los 7 endpoints:
 
 ---
 
+# 📄 Paginación en Citas y Consultas — COMPLETADO (2026-10-20)
+
+**Estado: 9/9 pruebas en verde.** Build 0 errores / 0 advertencias. Pruebas en vivo contra el
+servidor local HTTPS (`https://localhost:7140`).
+
+**Cómo se usa:** `GET /api/citas?pagina=2&tamanoPagina=20` (defaults `1` y `20`, tope 100).
+La respuesta de esos dos GET ya **no es un array** sino un objeto:
+
+```json
+{ "totalRegistros": 2, "pagina": 1, "tamanoPagina": 2, "totalPaginas": 1, "datos": [ ] }
+```
+
+### Registro de lo probado
+
+| # | Escenario | Resultado |
+|---|---|---|
+| 1 | `GET /api/citas?pagina=1&tamanoPagina=2` → envelope completo | ✅ |
+| 2 | Páginas 1 y 2 (`tamanoPagina=1`) sin solapamiento de IDs | ✅ |
+| 3 | `GET /api/consultas?pagina=1&tamanoPagina=1` → envelope (0 registros en BD) | ✅ |
+| 4 | Límites: `pagina=0`→1, `tamanoPagina=0`→1, `tamanoPagina=500`→100 | ✅ |
+| 5 | `GET /api/pacientes/{id}/consultas` (expediente) sigue devolviendo array plano | ✅ |
+| 6 | Filtros `pacienteId` y `estado` combinados con paginación | ✅ |
+| 7 | Página fuera de rango (`pagina=99`) → `datos: []` sin error | ✅ |
+| 8 | `GET /api/consultas/cita/{id}` sin consulta → 404 (no 500) | ✅ |
+| 9 | Sin token → 401 | ✅ |
+
+En React esto se traduce en: `res.totalPaginas` para los controles de paginación y
+`res.datos.map(...)` para la tabla — solo se renderizan los registros de la página actual.
+
+**Quedan sin paginar a propósito:** expediente por paciente y consulta por cita (listas acotadas
+de un solo paciente).
+
+---
+
 ## ⚠️ Recordatorio de git
 
 Solo `git commit`. **No hacer `git push`** hasta que yo lo indique.

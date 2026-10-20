@@ -149,14 +149,29 @@ activos hoy devuelve **204** (no hay check; sí lo hay para platos). ¿Va 409 co
   vez de `id`), que devolvía **500** en `POST /api/plantillas-menu`
 - [x] Los 14 endpoints de Platos y Plantillas quedan funcionando
 
+**Paginación en Citas y Consultas — COMPLETADO (2026-10-20):**
+- [x] `Core/DTOs/RespuestaPaginadaDto<T>` genérico: `totalRegistros`, `pagina`, `tamanoPagina`,
+  `totalPaginas`, `datos`
+- [x] `Pagina` (default 1) y `TamanoPagina` (default 20, tope 100) en `CitaFiltroDto` y
+  `ConsultaFiltroDto` (se pasan por query string: `?pagina=2&tamanoPagina=20`)
+- [x] `CitaService.ObtenerCitasAsync` y `ConsultaService.ObtenerConsultasAsync`: `CountAsync` +
+  `Skip/Take` después del orden, devolviendo el envelope
+- [x] Helper privado `ListarConsultasAsync` en `ConsultaService` (reutiliza el join sin duplicarlo)
+- [x] **Sin paginar** (a propósito): `GET /api/pacientes/{id}/consultas` (expediente) y
+  `GET /api/consultas/cita/{id}` — siguen devolviendo lista/objeto simple
+- [x] Firmas de `ICitaService`/`IConsultaService` y tipo de retorno de los GET de lista actualizados
+- [x] **Pruebas en vivo 2026-10-20 (9/9 OK)**: envelope de ambos módulos, páginas sin
+  solapamiento, límites (`pagina=0`→1, `tamanoPagina=0`→1, `500`→100), expediente sigue array,
+  filtros `pacienteId`/`estado` combinados con paginación, página fuera de rango → lista vacía
+  sin error, consulta por cita sin registro → 404 (no 500), sin token → 401
+- [x] Build limpio — 0 errores, 0 advertencias
+
+> Nota: la tabla de consultas está vacía en BD, así que su envelope se verificó con 0 registros;
+> el `Skip/Take/Count` está probado con datos reales en Citas (mismo patrón de código).
+
 ---
 
 ## ⏳ Pendientes (Prioridad Alta)
-
-### Paginación
-- [ ] Implementar paginación en Citas (CitaFiltroDto ya existe)
-- [ ] Implementar paginación en Consultas (ConsultaFiltroDto ya existe)
-- [ ] Retornar metadata: total, página, tamaño, total páginas
 
 ### Tests
 - [ ] Configurar xUnit + FluentAssertions
