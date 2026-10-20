@@ -52,7 +52,7 @@
 - [x] Pruebas manuales en `utriclinica-backend.http`
 - [x] Verificación end-to-end local: subida real a ambos buckets, descarga 200, límite 5 MB → 400
 - [ ] Al eliminar un registro **no se borra el archivo** del bucket (queda huérfano)
-- [ ] **Bloqueado**: definir `Supabase__StorageKey` en Render (service role key)
+- [x] **`Supabase__StorageKey` definida en Render** por el usuario (2026-10-20)
 
 > **⚠️ No hacer `git push`** hasta que el usuario lo indique. Solo commit local.
 

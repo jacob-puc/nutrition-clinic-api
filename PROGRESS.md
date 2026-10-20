@@ -176,14 +176,14 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 
 1. ~~**Decidir `DELETE plantilla` en uso**~~ → **Resuelto 2026-10-20**: 409 si está en uso;
    `?forzar=true` permite el soft-delete igual (los planes conservan su asignación)
-2. **Definir `Supabase__StorageKey` en Render** (los buckets ya existen)
+2. ~~**Definir `Supabase__StorageKey` en Render**~~ → **Definida por el usuario (2026-10-20)**
 3. Borrar el archivo del bucket al eliminar un registro (hoy queda huérfano)
-4. **Tests** (xUnit + Testcontainers)
+4. **Tests** (xUnit + Testcontainers) — *pospuesto por decisión del usuario (2026-10-20)*
 5. **Web a producción** → S3 + CloudFront + dominio
 6. **CI/CD** GitHub Actions (build + deploy automático a Render)
 
-> **⚠️ Git**: push hecho **2026-10-16** (`cbb29fb`, 8 commits: Alimentos, capa PLATO, Menús
-> Asignados y fix de `PUT /api/platos`). Regla: subir solo cuando el usuario lo indique.
+> **⚠️ Git**: push hecho **2026-10-20** (`d985033..6cf278e`: docs, paginación Citas/Consultas y
+> 409 de plantillas). Regla: subir solo cuando el usuario lo indique.
 
 ---
 

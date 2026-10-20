@@ -171,4 +171,4 @@ los 2 planes de Luis intactos, sin datos de prueba residuales).
 ## ⚠️ Recordatorio de git
 
 Solo `git commit`. **No hacer `git push`** hasta que yo lo indique.
-(Último push: **2026-10-16**, commits `deb798a..cbb29fb`.)
+(Último push: **2026-10-20**, commits `d985033..6cf278e`.)
