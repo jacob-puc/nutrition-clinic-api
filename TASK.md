@@ -175,6 +175,45 @@ a platos) y la plantilla solo desaparece del catálogo. Verificado en vivo (8/8 
 
 ---
 
+### Módulo Transacciones (Pagos + Facturación) — EN PROGRESO (2026-10-26)
+
+Cobro posterior al **cierre de la consulta**: pago → comprobante PDF → factura con datos fiscales.
+Especificación completa para codificar en `tasks-user.md`.
+
+**Decisiones aprobadas (2026-10-26):**
+- **Sin timbrado SAT en v1** (proyecto escolar): la factura guarda RFC, régimen, uso de CFDI, CP y
+  tipo de persona, pero **sin UUID** — la estructura queda lista para conectar un PAC después.
+- **IVA configurable** en `DatosFiscalesClinica.TarifaIva` (default 16%), snapshot al emitir.
+- **1 pago por consulta** (índice único); se anula y se puede volver a cobrar.
+- Recibo con folio `REC-<año>-<n>`; facturas con Serie + Folio.
+- Catálogos SAT **verificados** en la web (2026-10-26): 18 regímenes (`c_RegimenFiscal`) y
+  24 usos (`c_UsoCFDI`) vigentes CFDI 4.0; el valor del enum `RegimenFiscal` = la clave SAT.
+
+**División (decisión del usuario, 2026-10-26):**
+
+| Parte | Quién |
+|---|---|
+| Enums (6), entidades (3), controllers | **tú** |
+| Config EF + migración, DTOs, validadores, servicios (409/folios/totales), DI, QuestPDF (2 PDFs), seed, pruebas | yo |
+
+- [ ] **Tú — Tarea 1**: 6 enums (`MetodoPago`, `EstadoPago`, `TipoPersona`, `UsoCfdi`,
+  `RegimenFiscal`, `EstatusFactura`) — spec exacta en `tasks-user.md`
+- [ ] **Tú — Tarea 2**: 3 entidades (`Pago`, `Factura`, `DatosFiscalesClinica`)
+- [ ] **Yo**: config `ApplicationDbContext` (FKs a `Consulta`/`Paciente`/`Pago`, índices únicos
+  `ConsultaId` y `PagoId`, enums → string + check constraints, `RegimenFiscal` → clave SAT como
+  texto) + migración aplicada
+- [ ] **Yo**: DTOs (`Crear`/`Respuesta`/`Filtro` de Pago y Factura + config) y validadores
+  (RFC 12–13, CP 5, TipoPersona↔Régimen, Monto > 0)
+- [ ] **Yo**: `PagoService` (400 si consulta abierta, 409 si ya pagada/anulada, folio, anulación)
+  y `FacturaService` (409, totales con IVA, Serie+Folio)
+- [ ] **Yo**: QuestPDF NuGet + `LicenseType.Community` — PDF comprobante de pago y PDF factura;
+  seed de `DatosFiscalesClinica`; registro en DI
+- [ ] **Yo**: pruebas en vivo → `tasks-user.md`
+- [ ] **Tú — Tarea 3**: `PagosController` (5 endpoints), `FacturasController` (3), config datos
+  fiscales (GET/PUT) — cuando yo avise
+
+---
+
 ## ⏳ Pendientes (Prioridad Alta)
 
 ### Tests

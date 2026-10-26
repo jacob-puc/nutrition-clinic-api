@@ -202,6 +202,340 @@ referenciara (huérfano: ocupa espacio y, peor, la foto del paciente sigue exist
 
 ---
 
+# 💳 Módulo Transacciones (Pagos + Facturación) — EN PROGRESO (2026-10-26)
+
+Cobro posterior al cierre de la consulta: **pago → comprobante PDF → factura con datos fiscales**.
+
+## ✅ Decisiones aprobadas (2026-10-26)
+
+1. **Sin timbrado SAT en v1** (proyecto escolar): la factura guarda RFC, régimen, uso de CFDI,
+   CP y tipo de persona correctamente, pero **sin UUID** — la estructura queda lista para
+   conectar un PAC (ej. Facturapi) en el futuro.
+2. **IVA configurable** en `DatosFiscalesClinica.TarifaIva` (default **16%**), snapshot al emitir.
+3. **1 pago por consulta** (índice único en `ConsultaId`); se puede **anular** y volver a cobrar.
+4. Recibo con folio consecutivo `REC-<año>-<n>`; facturas con **Serie + Folio** de la config.
+
+## 👥 División de tareas (decisión del usuario, 2026-10-26)
+
+| Parte | Quién |
+|---|---|
+| Enums (6), entidades (3), controllers | **tú** |
+| Config EF + migración, DTOs, validadores, servicios (reglas 409/folios/totales), DI, QuestPDF (2 PDFs), seed, pruebas en vivo | yo |
+
+**Orden:** Tú haces **Tarea 1 (enums)** y **Tarea 2 (entidades)** primero → yo hago todo lo mío
+→ tú **Tarea 3 (controllers)** cuando yo avise (los controllers necesitan mis DTOs y servicios).
+
+---
+
+## Tarea 1 (tuya): 6 enums — `Core/Enums/`
+
+### `MetodoPago.cs`
+```csharp
+namespace nutriclinica_backend.Core.Enums;
+
+public enum MetodoPago
+{
+    Efectivo,
+    TarjetaDebito,
+    TarjetaCredito,
+    TransferenciaSPEI,
+    QR,
+    Otro
+}
+```
+
+### `EstadoPago.cs`
+```csharp
+namespace nutriclinica_backend.Core.Enums;
+
+public enum EstadoPago
+{
+    Pagado,
+    Anulado
+}
+```
+
+### `TipoPersona.cs`
+```csharp
+namespace nutriclinica_backend.Core.Enums;
+
+public enum TipoPersona
+{
+    Fisica,
+    Moral
+}
+```
+
+### `EstatusFactura.cs`
+```csharp
+namespace nutriclinica_backend.Core.Enums;
+
+public enum EstatusFactura
+{
+    Borrador,
+    Emitida,
+    Anulada
+}
+```
+
+### `UsoCfdi.cs` (catálogo SAT `c_UsoCFDI` vigente — 24 claves, el nombre del miembro = la clave)
+```csharp
+namespace nutriclinica_backend.Core.Enums;
+
+public enum UsoCfdi
+{
+    /// <summary>G01 - Adquisición de mercancías</summary>
+    G01,
+    /// <summary>G02 - Devoluciones, descuentos o bonificaciones</summary>
+    G02,
+    /// <summary>G03 - Gastos en general</summary>
+    G03,
+    /// <summary>I01 - Construcciones</summary>
+    I01,
+    /// <summary>I02 - Mobiliario y equipo de oficina</summary>
+    I02,
+    /// <summary>I03 - Equipo de transporte</summary>
+    I03,
+    /// <summary>I04 - Equipo de cómputo y accesorios</summary>
+    I04,
+    /// <summary>I05 - Dados, troqueles, moldes, matrices y herramental</summary>
+    I05,
+    /// <summary>I06 - Comunicaciones telefónicas</summary>
+    I06,
+    /// <summary>I07 - Comunicaciones satelitales</summary>
+    I07,
+    /// <summary>I08 - Otra maquinaria y equipo</summary>
+    I08,
+    /// <summary>D01 - Honorarios médicos, dentales y gastos hospitalarios</summary>
+    D01,
+    /// <summary>D02 - Gastos médicos por incapacidad o discapacidad</summary>
+    D02,
+    /// <summary>D03 - Gastos funerales</summary>
+    D03,
+    /// <summary>D04 - Donativos</summary>
+    D04,
+    /// <summary>D06 - Aportaciones voluntarias al SAR</summary>
+    D06,
+    /// <summary>D07 - Primas por seguros de gastos médicos</summary>
+    D07,
+    /// <summary>D08 - Gastos de transportación escolar obligatoria</summary>
+    D08,
+    /// <summary>D09 - Depósitos en cuentas para el ahorro, primas de planes de pensiones</summary>
+    D09,
+    /// <summary>D10 - Pagos por servicios educativos (colegiaturas)</summary>
+    D10,
+    /// <summary>S01 - Sin efectos fiscales</summary>
+    S01,
+    /// <summary>CP01 - Pagos (CFDI de pagos)</summary>
+    CP01,
+    /// <summary>CN01 - Nómina</summary>
+    CN01
+}
+```
+
+### `RegimenFiscal.cs` (catálogo SAT `c_RegimenFiscal` vigente — **el valor numérico = la clave SAT**;
+se guarda en BD como texto `"601"`, yo configuro el converter en EF)
+```csharp
+namespace nutriclinica_backend.Core.Enums;
+
+public enum RegimenFiscal
+{
+    // Persona Moral: 601, 603, 622, 623, 624
+    // Persona Física: 605, 606, 607, 608, 611, 612, 614, 615, 616, 621, 625
+    // Ambas:          610, 626
+
+    /// <summary>601 - General de Ley Personas Morales (Moral)</summary>
+    GeneralDeLeyPersonasMorales = 601,
+    /// <summary>603 - Personas Morales con Fines no Lucrativos (Moral)</summary>
+    PersonasMoralesConFinesNoLucrativos = 603,
+    /// <summary>605 - Sueldos y Salarios e Ingresos Asimilados a Salarios (Física)</summary>
+    SueldosYSalarios = 605,
+    /// <summary>606 - Arrendamiento (Física)</summary>
+    Arrendamiento = 606,
+    /// <summary>607 - Enajenación o Adquisición de Bienes (Física)</summary>
+    EnajenacionOAdquisicionDeBienes = 607,
+    /// <summary>608 - Demás Ingresos (Física)</summary>
+    DemasIngresos = 608,
+    /// <summary>610 - Residentes en el Extranjero sin Establecimiento Permanente (ambas)</summary>
+    ResidentesEnElExtranjero = 610,
+    /// <summary>611 - Ingresos por Dividendos (Física)</summary>
+    IngresosPorDividendos = 611,
+    /// <summary>612 - Personas Físicas con Actividades Empresariales y Profesionales (Física)</summary>
+    ActividadesEmpresarialesYProfesionales = 612,
+    /// <summary>614 - Ingresos por Intereses (Física)</summary>
+    IngresosPorIntereses = 614,
+    /// <summary>615 - Ingresos por Obtención de Premios (Física)</summary>
+    IngresosPorObtencionDePremios = 615,
+    /// <summary>616 - Sin Obligaciones Fiscales (Física)</summary>
+    SinObligacionesFiscales = 616,
+    /// <summary>621 - Incorporación Fiscal (Física)</summary>
+    IncorporacionFiscal = 621,
+    /// <summary>622 - Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras (Moral)</summary>
+    ActividadesAgricolasGanaderas = 622,
+    /// <summary>623 - Opcional para Grupos de Sociedades (Moral)</summary>
+    OpcionalParaGruposDeSociedades = 623,
+    /// <summary>624 - Coordinados (Moral)</summary>
+    Coordinados = 624,
+    /// <summary>625 - Actividades Empresariales con ingresos por Plataformas Tecnológicas (Física)</summary>
+    PlataformasTecnologicas = 625,
+    /// <summary>626 - Régimen Simplificado de Confianza (RESICO, ambas)</summary>
+    RegimenSimplificadoDeConfianza = 626
+}
+```
+
+---
+
+## Tarea 2 (tuya): 3 entidades — `Core/Entities/`
+
+### `Pago.cs`
+```csharp
+using nutriclinica_backend.Core.Enums;
+
+namespace nutriclinica_backend.Core.Entities;
+
+public class Pago
+{
+    public Guid Id { get; set; }
+
+    public Guid ConsultaId { get; set; }
+    public virtual Consulta Consulta { get; set; } = null!;
+
+    public Guid PacienteId { get; set; }
+    public virtual Paciente Paciente { get; set; } = null!;
+
+    public decimal Monto { get; set; }
+    public string Moneda { get; set; } = "MXN";
+    public MetodoPago MetodoPago { get; set; }
+    public EstadoPago Estado { get; set; } = EstadoPago.Pagado;
+    public string NumeroRecibo { get; set; } = string.Empty; // REC-2026-0001 (lo genera el servicio)
+    public DateTime FechaPago { get; set; }
+    public string? Notas { get; set; }
+
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+    public bool IsActive { get; set; } = true;
+}
+```
+
+### `Factura.cs`
+```csharp
+using nutriclinica_backend.Core.Enums;
+
+namespace nutriclinica_backend.Core.Entities;
+
+public class Factura
+{
+    public Guid Id { get; set; }
+
+    public Guid PagoId { get; set; }
+    public virtual Pago Pago { get; set; } = null!;
+
+    // ---- Receptor ----
+    public TipoPersona TipoPersona { get; set; }
+    public string RFC { get; set; } = string.Empty;            // 12 (moral) o 13 (física) caracteres
+    public string NombreRazonSocial { get; set; } = string.Empty;
+    public RegimenFiscal RegimenFiscal { get; set; }
+    public UsoCfdi UsoCfdi { get; set; }
+    public string CodigoPostal { get; set; } = string.Empty;   // 5 dígitos, CP del receptor
+
+    // ---- Comprobante (v1 sin timbrar) ----
+    public string Serie { get; set; } = "A";
+    public int Folio { get; set; }
+    public DateTime FechaEmision { get; set; }
+    public string? UUID { get; set; }                          // NULL hasta conectar un PAC
+
+    // ---- Totales ----
+    public decimal Subtotal { get; set; }
+    public decimal TarifaIva { get; set; }                     // % snapshot al emitir (default 16)
+    public decimal Iva { get; set; }
+    public decimal Total { get; set; }
+
+    public EstatusFactura Estatus { get; set; } = EstatusFactura.Emitida;
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+    public bool IsActive { get; set; } = true;
+}
+```
+
+### `DatosFiscalesClinica.cs` (singleton — el emisor; una sola fila en BD)
+```csharp
+using nutriclinica_backend.Core.Enums;
+
+namespace nutriclinica_backend.Core.Entities;
+
+public class DatosFiscalesClinica
+{
+    public Guid Id { get; set; }
+
+    public string RazonSocial { get; set; } = string.Empty;
+    public string RFC { get; set; } = string.Empty;
+    public RegimenFiscal RegimenFiscal { get; set; }           // régimen del emisor
+    public string CodigoPostal { get; set; } = string.Empty;   // CP de expedición (5 dígitos)
+    public string Direccion { get; set; } = string.Empty;
+    public string? Telefono { get; set; }
+    public string? Correo { get; set; }
+    public string? LogoUrl { get; set; }
+
+    public string Serie { get; set; } = "A";                   // serie para facturas
+    public decimal TarifaIva { get; set; } = 16m;              // IVA configurable, default 16%
+
+    public DateTime FechaActualizacion { get; set; } = DateTime.UtcNow;
+}
+```
+
+---
+
+## Tarea 3 (tuya, AL FINAL — cuando yo avise): controllers
+
+Los endpoints, contra los servicios que voy a crear:
+
+| Método | Ruta | Acción → servicio |
+|---|---|---|
+| `POST` | `/api/pagos` | `CrearPagoAsync(dto)` → **201** |
+| `GET` | `/api/pagos` | `ObtenerPagosAsync(filtro)` → envelope paginado |
+| `GET` | `/api/pagos/{id:guid}` | `ObtenerPagoPorIdAsync(id)` → 200/404 |
+| `POST` | `/api/pagos/{id:guid}/anular` | `AnularPagoAsync(id, motivo)` → 200/404/409 |
+| `GET` | `/api/pagos/{id:guid}/comprobante` | PDF (Fase 3) |
+| `POST` | `/api/pagos/{id:guid}/factura` | `EmitirFacturaAsync(dto)` → **201**/409 |
+| `GET` | `/api/facturas` | `ObtenerFacturasAsync(filtro)` → envelope |
+| `GET` | `/api/facturas/{id:guid}` | `ObtenerFacturaPorIdAsync(id)` → 200/404 |
+| `GET` | `/api/facturas/{id:guid}/pdf` | PDF (Fase 3) |
+| `GET`/`PUT` | `/api/configuracion/datos-fiscales` | `ObtenerDatosFiscalesAsync()` / `ActualizarDatosFiscalesAsync(dto)` |
+
+Contrato de servicios que voy a implementar (para que puedas armar los controllers):
+
+```csharp
+public interface IPagoService
+{
+    Task<PagoRespuestaDto> CrearPagoAsync(CrearPagoDto dto);
+    Task<RespuestaPaginadaDto<PagoRespuestaDto>> ObtenerPagosAsync(PagoFiltroDto filtro);
+    Task<PagoRespuestaDto?> ObtenerPagoPorIdAsync(Guid id);
+    Task<PagoRespuestaDto> AnularPagoAsync(Guid id, string? motivo);
+    Task<byte[]> GenerarComprobantePdfAsync(Guid id);   // Fase 3 (QuestPDF)
+}
+
+public interface IFacturaService
+{
+    Task<FacturaRespuestaDto> EmitirFacturaAsync(CrearFacturaDto dto);
+    Task<RespuestaPaginadaDto<FacturaRespuestaDto>> ObtenerFacturasAsync(FacturaFiltroDto filtro);
+    Task<FacturaRespuestaDto?> ObtenerFacturaPorIdAsync(Guid id);
+    Task<byte[]> GenerarFacturaPdfAsync(Guid id);       // Fase 3 (QuestPDF)
+}
+```
+
+**Reglas que implemento yo (servicios, no FluentValidation porque leen la BD):**
+- Pago solo sobre consulta **cerrada** (`FechaFin` no nula) → `400` si no.
+- Consulta **ya pagada** → `409` con hint.
+- `Anular` → estado `Anulado`, libera la consulta para un nuevo pago; re-anular → `409`.
+- Factura solo sobre pago `Pagado` y sin factura previa → `409`.
+- Folio `REC-<año>-<n>` y `Serie+Folio` consecutivos.
+
+**Validadores míos (FluentValidation):**
+- `CrearPagoDto`: `Monto > 0`, `ConsultaId` GUID, `MetodoPago` en catálogo.
+- `CrearFacturaDto`: RFC con regex `^([A-ZÑ&]{3,4}\d{6}[A-Z\d]{3})$` (12–13), CP 5 dígitos,
+  `TipoPersona` ↔ `RegimenFiscal` compatibles (601/603/622/623/624 = Moral;
+  605/606/607/608/611/612/614/615/616/621/625 = Física; 610/626 = ambas).
+
+---
+
 ## ⚠️ Recordatorio de git
 
 Solo `git commit`. **No hacer `git push`** hasta que yo lo indique.
