@@ -14,5 +14,8 @@ public class ActualizarCitaValidator : AbstractValidator<ActualizarCitaDto>
 
         RuleFor(x => x.Motivo)
             .MaximumLength(500).WithMessage("El motivo no puede tener más de 500 caracteres");
+        RuleFor(x => x.FechaInicio)
+            .GreaterThan(DateTime.UtcNow.AddMinutes(-5))
+            .WithMessage("La fecha de inicio no puede ser una fecha anterior.");
     }
 }

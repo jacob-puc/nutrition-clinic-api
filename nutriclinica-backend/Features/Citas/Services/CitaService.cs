@@ -60,6 +60,8 @@ public class CitaService : ICitaService
             .AsNoTracking()
             .FirstOrDefaultAsync(n => n.Id == dto.NutricionistaId && n.IsActive)
             ?? throw new KeyNotFoundException($"No se encontró un nutricionista activo con ID: {dto.NutricionistaId}");
+        
+        await ValidarDisponibilidadAgendaAsync(dto.NutricionistaId, dto.PacienteId, dto.FechaInicio, dto.FechaFin);
 
         var cita = new Cita
         {
@@ -101,6 +103,7 @@ public class CitaService : ICitaService
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == cita.PacienteId && p.IsActive)
             ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {cita.PacienteId}");
+        await ValidarDisponibilidadAgendaAsync(dto.NutricionistaId, cita.PacienteId, dto.FechaInicio, dto.FechaFin, citaId);
 
         cita.NutricionistaId = dto.NutricionistaId;
         cita.FechaInicio = dto.FechaInicio;
@@ -257,6 +260,42 @@ public class CitaService : ICitaService
         await _context.SaveChangesAsync();
     }
 
+    private async Task ValidarDisponibilidadAgendaAsync(
+        Guid nutricionistaId,
+        Guid pacienteId,
+        DateTime fechaInicio,
+        DateTime fechaFin,
+        Guid? citaExcluidaId = null)
+    {
+        var estadosBloqueantes = new[]
+        {
+            EstadoCita.Programada,
+            EstadoCita.Confirmada,
+            EstadoCita.EnCurso
+        };
+        var existeCitaNutricionista = await _context.Citas
+            .AsNoTracking()
+            .AnyAsync(c => c.NutricionistaId == nutricionistaId
+                           && estadosBloqueantes.Contains(c.Estado)
+                           && (!citaExcluidaId.HasValue || c.Id != citaExcluidaId.Value)
+                           && c.FechaInicio < fechaFin
+                           && fechaInicio < c.FechaFin);
+        if (existeCitaNutricionista)
+        {
+            throw new ConflictException("El nutricionista no está disponible en el horario seleccionado.");
+        }
+        var existeCitaPaciente = await _context.Citas
+            .AsNoTracking()
+            .AnyAsync(c => c.PacienteId == pacienteId
+                           && estadosBloqueantes.Contains(c.Estado)
+                           && (!citaExcluidaId.HasValue || c.Id != citaExcluidaId.Value)
+                           && c.FechaInicio < fechaFin
+                           && fechaInicio < c.FechaFin);
+        if (existeCitaPaciente)
+        {
+            throw new ConflictException("El paciente ya tiene una cita en el horario seleccionado.");
+        }
+    }
     private static bool EsTerminal(EstadoCita estado) =>
         TransicionesPermitidas[estado].Length == 0;
 

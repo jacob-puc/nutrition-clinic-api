@@ -28,11 +28,16 @@ using nutriclinica_backend.Features.Alimentos.Interfaces;
 using nutriclinica_backend.Features.Alimentos.Services;
 using nutriclinica_backend.Features.Menus.Interfaces;
 using nutriclinica_backend.Features.Menus.Services;
+using nutriclinica_backend.Features.Transacciones.Interfaces;
+using nutriclinica_backend.Features.Transacciones.Services;
+using QuestPDF.Infrastructure;
 using nutriclinica_backend.Infrastructure.Middlewares;
 using nutriclinica_backend.Infrastructure.Persistence;
 using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -106,6 +111,9 @@ builder.Services.AddScoped<IAlimentoService, AlimentoService>();
 builder.Services.AddScoped<IPlatoService, PlatoService>();
 builder.Services.AddScoped<IPlantillaMenuService, PlantillaMenuService>();
 builder.Services.AddScoped<IMenuAsignadoService, MenuAsignadoService>();
+builder.Services.AddScoped<IPagoService, PagoService>();
+builder.Services.AddScoped<IFacturaService, FacturaService>();
+builder.Services.AddScoped<IDatosFiscalesClinicaService, DatosFiscalesClinicaService>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 

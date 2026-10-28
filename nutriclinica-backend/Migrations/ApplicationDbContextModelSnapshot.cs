@@ -168,6 +168,70 @@ namespace nutriclinica_backend.Migrations
                     b.ToTable("Consultas");
                 });
 
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.DatosFiscalesClinica", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodigoPostal")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<string>("Correo")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Direccion")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("RFC")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
+
+                    b.Property<string>("RazonSocial")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RegimenFiscal")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Serie")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal>("TarifaIva")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DatosFiscalesClinica", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DatosFiscalesClinica_RegimenFiscal", "\"RegimenFiscal\" IN ('601','603','605','606','607','608','610','611','612','614','615','616','621','622','623','624','625','626')");
+
+                            t.HasCheckConstraint("CK_DatosFiscalesClinica_TarifaIva", "\"TarifaIva\" >= 0 AND \"TarifaIva\" <= 100");
+                        });
+                });
+
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.DetalleMenuAsignado", b =>
                 {
                     b.Property<Guid>("Id")
@@ -330,6 +394,108 @@ namespace nutriclinica_backend.Migrations
                     b.HasIndex("PacienteId");
 
                     b.ToTable("DocumentosPaciente");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Factura", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodigoPostal")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<string>("Estatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaEmision")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Folio")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("Iva")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("NombreRazonSocial")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("PagoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RFC")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
+
+                    b.Property<string>("RegimenFiscal")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Serie")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<decimal>("TarifaIva")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("TipoPersona")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("UUID")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("UsoCfdi")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FechaEmision");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("PagoId")
+                        .IsUnique();
+
+                    b.HasIndex("RFC");
+
+                    b.ToTable("Facturas", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Facturas_Estatus", "\"Estatus\" IN ('Borrador','Emitida','Anulada')");
+
+                            t.HasCheckConstraint("CK_Facturas_RegimenFiscal", "\"RegimenFiscal\" IN ('601','603','605','606','607','608','610','611','612','614','615','616','621','622','623','624','625','626')");
+
+                            t.HasCheckConstraint("CK_Facturas_TipoPersona", "\"TipoPersona\" IN ('Fisica','Moral')");
+
+                            t.HasCheckConstraint("CK_Facturas_Totales", "\"Subtotal\" >= 0 AND \"Iva\" >= 0 AND \"Total\" >= 0");
+
+                            t.HasCheckConstraint("CK_Facturas_UsoCfdi", "\"UsoCfdi\" IN ('G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D06','D07','D08','D09','D10','S01','CP01','CN01')");
+                        });
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.FotoSeguimiento", b =>
@@ -609,6 +775,78 @@ namespace nutriclinica_backend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Pago", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConsultaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaPago")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MetodoPago")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Moneda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("Notas")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("NumeroRecibo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("PacienteId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConsultaId")
+                        .IsUnique()
+                        .HasFilter("\"Estado\" = 'Pagado'");
+
+                    b.HasIndex("FechaPago");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("NumeroRecibo")
+                        .IsUnique();
+
+                    b.HasIndex("PacienteId");
+
+                    b.ToTable("Pagos", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Pagos_Estado", "\"Estado\" IN ('Pagado','Anulado')");
+
+                            t.HasCheckConstraint("CK_Pagos_MetodoPago", "\"MetodoPago\" IN ('Efectivo','TarjetaDebito','TarjetaCredito','Transferencia','QR','Otro')");
+
+                            t.HasCheckConstraint("CK_Pagos_Monto", "\"Monto\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.PlantillaMenu", b =>
                 {
                     b.Property<Guid>("Id")
@@ -807,6 +1045,17 @@ namespace nutriclinica_backend.Migrations
                     b.Navigation("Paciente");
                 });
 
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Factura", b =>
+                {
+                    b.HasOne("nutriclinica_backend.Core.Entities.Pago", "Pago")
+                        .WithOne()
+                        .HasForeignKey("nutriclinica_backend.Core.Entities.Factura", "PagoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Pago");
+                });
+
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.FotoSeguimiento", b =>
                 {
                     b.HasOne("nutriclinica_backend.Core.Entities.Consulta", "Consulta")
@@ -870,6 +1119,25 @@ namespace nutriclinica_backend.Migrations
                     b.Navigation("Paciente");
 
                     b.Navigation("PlantillaMenu");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Pago", b =>
+                {
+                    b.HasOne("nutriclinica_backend.Core.Entities.Consulta", "Consulta")
+                        .WithMany()
+                        .HasForeignKey("ConsultaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("nutriclinica_backend.Core.Entities.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Consulta");
+
+                    b.Navigation("Paciente");
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.PlantillaMenu", b =>

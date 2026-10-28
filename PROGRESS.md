@@ -1,8 +1,8 @@
 # Progreso del Proyecto NutriClínica (Backend)
 
-## Estado Actual: **API desplegada, Auth completo, Alimentos completo, módulo Menús en curso**
+## Estado Actual: **API desplegada; Auth, Alimentos, Menús y Transacciones (Pagos + Facturación) completos**
 
-**Última actualización:** 2026-10-20
+**Última actualización:** 2026-10-27
 
 ---
 
@@ -19,6 +19,8 @@
   totalPaginas, datos}` con `?pagina=&tamanoPagina=` (2026-10-20: 9/9 pruebas OK)
 - ✅ **Borrado limpio de media**: eliminar foto/documento también borra el archivo de Supabase
   Storage — sin huérfanos (2026-10-20, verificado en vivo + auditoría de buckets)
+- ✅ **Transacciones (Pagos + Facturación)**: pago al cerrar consulta, comprobante PDF, factura
+  con datos fiscales SAT sin timbrar (2026-10-27, 24/24 pruebas en vivo)
 - ✅ **Base de datos:** Supabase (PostgreSQL) en `us-west-2`
 - ✅ **Despliegue:** Render (free tier)
 - ✅ **Repositorio:** https://github.com/jacob-puc/nutrition-clinic-api
@@ -40,6 +42,7 @@
 | Alimentos | Alimento | 6 (CRUD + restaurar) + imagen | ✅ 24/24 pruebas |
 | Menús | Plato, PlantillaMenu | 14 (2 controllers) | ✅ Verificado en vivo |
 | Menús Asignados | MenuAsignado | 7 (controller del usuario) | ✅ Verificado en vivo (2026-10-16) |
+| Transacciones | Pago, Factura, DatosFiscalesClinica | 11 (3 controllers) | ✅ 24/24 pruebas (2026-10-27) |
 
 ### Módulo de Menús — capa PLATO
 
@@ -103,6 +106,39 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
   reglas clínicas, 401/404/409/400. **Pregunta abierta**: `DELETE plantilla` en uso por planes
   activos hoy devuelve 204 (sin check) — decidir si va 409 como el plato.
 
+### Módulo Transacciones — Pagos + Facturación (2026-10-27)
+
+Cobro **posterior al cierre de la consulta** (`FechaFin` no nula): pago → comprobante PDF →
+factura con datos fiscales del receptor. **Sin timbrado SAT en v1** (proyecto escolar): se guarda
+todo lo necesario para el CFDI 4.0 pero `UUID` queda `NULL` y los PDFs llevan el aviso
+"SIN timbrar".
+
+- **Migración** `20261028030615_AgregarPagosYFacturas` **aplicada** (tablas `Pagos`, `Facturas`,
+  `DatosFiscalesClinica`).
+- **Entidades/enums del usuario**: `Pago` (+`Moneda`, `Estado`, `IsActive`), `Factura` (+`TarifaIva`),
+  `DatosFiscalesClinica` (singleton del emisor), `MetodoPago` (+`QR`), `EstadoPago`, `TipoPersona`,
+  `UsoCfdi` (24 claves CFDI 4.0), `RegimenFiscal` (18 claves, valor del enum = clave SAT),
+  `EstatusFactura`.
+- **Reglas de servicio** (verificadas en vivo): pago solo sobre consulta cerrada (400); 1 pago
+  vigente por consulta (409); pago anulado no facturable ni re-anulable (409); factura solo de
+  pago `Pagado` y sin factura previa (409); pago con factura no se anula (409); sin datos fiscales
+  configurados no se factura (409).
+- **Índice único filtrado** `"Estado" = 'Pagado'` en `Pagos.ConsultaId`: al anular se libera la
+  consulta para volver a cobrar, conservando el recibo anulado como historial.
+- **Folios**: recibo `REC-<año>-<n>` consecutivo; facturas con `Serie` de la configuración +
+  `Folio` consecutivo por serie.
+- **IVA configurable** (`DatosFiscalesClinica.TarifaIva`, default 16%): el `Monto` del pago es el
+  **total**; `Subtotal = Monto / (1 + IVA)`, `Iva = Monto − Subtotal`, snapshot `TarifaIva` en la
+  factura al emitir.
+- **PDFs con QuestPDF 2026.9.1** (`LicenseType.Community`): comprobante de pago y factura, cultura
+  `es-MX`, datos del emisor/receptor, tabla de conceptos y totales.
+- **Endpoints**: `api/pagos` (5 + factura), `api/facturas` (4), `api/configuracion/datos-fiscales`
+  (GET/PUT).
+- **Seed**: `DatosFiscalesClinica` se crea con valores placeholder (`NUT250101AB1`, serie `A`,
+  IVA 16%) independiente del seed de admin, y se edita por `PUT`.
+- **Extra**: `CitaService` ahora valida disponibilidad de agenda (nutricionista y paciente) y
+  devuelve **409** en solapamientos (antes lanzaba `Exception` genérica → 500).
+
 ### Upload de archivos
 - **Almacenamiento**: Supabase Storage, consumido por su REST API directa
   (el cliente NuGet `Supabase` fue descartado: fallaba en reflexión por dependencias
@@ -145,6 +181,7 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 - Migración `20261009174116_AgregarCatalogoAlimentos` (tabla `Alimentos`)
 - Migración `20261010215328_AgregarPlantillasMenu` (tablas `Platos`, `DetallesPlato`, `PlantillasMenu`, `DetallesPlantillaMenu`)
 - Migración `20261014201651_AgregarMenusAsignados` (tablas `MenusAsignados`, `DetallesMenuAsignado`)
+- Migración `20261028030615_AgregarPagosYFacturas` (tablas `Pagos`, `Facturas`, `DatosFiscalesClinica`)
 - Connection string solo por variable de entorno
 - `MaxPoolSize=5` en código para no agotar pooler
 
@@ -182,12 +219,14 @@ sustituir un plato entero si el paciente es alérgico sin tocar el resto de la a
 3. ~~**Borrar el archivo del bucket al eliminar un registro**~~ → **Resuelto 2026-10-20**:
    `EliminarFotoAsync`/`EliminarDocumentoAsync` borran también el archivo; auditoría de ambos
    buckets sin huérfanos
-4. **Tests** (xUnit + Testcontainers) — *pospuesto por decisión del usuario (2026-10-20)*
-5. **Web a producción** → S3 + CloudFront + dominio
-6. **CI/CD** GitHub Actions (build + deploy automático a Render)
+4. ~~**Módulo Transacciones (Pagos + Facturación)**~~ → **Resuelto 2026-10-27**: 24/24 pruebas en
+   vivo; timbrado SAT real queda como evolución futura (conectar un PAC)
+5. **Tests** (xUnit + Testcontainers) — *pospuesto por decisión del usuario (2026-10-20)*
+6. **Web a producción** → S3 + CloudFront + dominio
+7. **CI/CD** GitHub Actions (build + deploy automático a Render)
 
-> **⚠️ Git**: push hecho **2026-10-20** (`d985033..6cf278e`: docs, paginación Citas/Consultas y
-> 409 de plantillas). Regla: subir solo cuando el usuario lo indique.
+> **⚠️ Git**: último push **2026-10-20** (`d985033..6cf278e`). Regla: subir solo cuando el
+> usuario lo indique.
 
 ---
 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
+using nutriclinica_backend.Core.Enums;
 
 namespace nutriclinica_backend.Infrastructure.Persistence;
 
@@ -24,6 +25,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<DetallePlantillaMenu> DetallesPlantillaMenu => Set<DetallePlantillaMenu>();
     public DbSet<MenuAsignado> MenusAsignados => Set<MenuAsignado>();
     public DbSet<DetalleMenuAsignado> DetallesMenuAsignado => Set<DetalleMenuAsignado>();
+    public DbSet<Pago> Pagos => Set<Pago>();
+    public DbSet<Factura> Facturas => Set<Factura>();
+    public DbSet<DatosFiscalesClinica> DatosFiscalesClinica => Set<DatosFiscalesClinica>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -362,6 +366,141 @@ public class ApplicationDbContext : DbContext
 
             entity.HasIndex(d => new { d.MenuAsignadoId, d.DiaSemana, d.TiempoComida, d.PlatoId })
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<Pago>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+
+            entity.Property(p => p.Monto).HasPrecision(10, 2);
+            entity.Property(p => p.Moneda).HasMaxLength(3).IsRequired();
+            entity.Property(p => p.NumeroRecibo).HasMaxLength(20).IsRequired();
+            entity.Property(p => p.Notas).HasMaxLength(500);
+            entity.Property(p => p.MetodoPago).HasConversion<string>();
+            entity.Property(p => p.Estado).HasConversion<string>();
+
+            entity.HasOne(p => p.Consulta)
+                .WithMany()
+                .HasForeignKey(p => p.ConsultaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(p => p.Paciente)
+                .WithMany()
+                .HasForeignKey(p => p.PacienteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.ToTable("Pagos", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_Pagos_MetodoPago",
+                    "\"MetodoPago\" IN ('Efectivo','TarjetaDebito','TarjetaCredito','Transferencia','QR','Otro')");
+
+                table.HasCheckConstraint(
+                    "CK_Pagos_Estado",
+                    "\"Estado\" IN ('Pagado','Anulado')");
+
+                table.HasCheckConstraint(
+                    "CK_Pagos_Monto",
+                    "\"Monto\" > 0");
+            });
+
+            // Solo un pago vigente por consulta; al anularse se libera para volver a cobrar.
+            entity.HasIndex(p => p.ConsultaId)
+                .IsUnique()
+                .HasFilter("\"Estado\" = 'Pagado'");
+
+            entity.HasIndex(p => p.NumeroRecibo).IsUnique();
+            entity.HasIndex(p => p.PacienteId);
+            entity.HasIndex(p => p.FechaPago);
+            entity.HasIndex(p => p.IsActive);
+        });
+
+        modelBuilder.Entity<Factura>(entity =>
+        {
+            entity.HasKey(f => f.Id);
+
+            entity.Property(f => f.TipoPersona).HasConversion<string>();
+            entity.Property(f => f.UsoCfdi).HasConversion<string>();
+            entity.Property(f => f.Estatus).HasConversion<string>();
+            entity.Property(f => f.RegimenFiscal).HasConversion(
+                v => ((int)v).ToString(),
+                v => (RegimenFiscal)int.Parse(v));
+
+            entity.Property(f => f.RFC).HasMaxLength(13).IsRequired();
+            entity.Property(f => f.NombreRazonSocial).HasMaxLength(200).IsRequired();
+            entity.Property(f => f.CodigoPostal).HasMaxLength(5).IsRequired();
+            entity.Property(f => f.Serie).HasMaxLength(10).IsRequired();
+            entity.Property(f => f.UUID).HasMaxLength(36);
+            entity.Property(f => f.Subtotal).HasPrecision(10, 2);
+            entity.Property(f => f.TarifaIva).HasPrecision(5, 2);
+            entity.Property(f => f.Iva).HasPrecision(10, 2);
+            entity.Property(f => f.Total).HasPrecision(10, 2);
+
+            entity.HasOne(f => f.Pago)
+                .WithOne()
+                .HasForeignKey<Factura>(f => f.PagoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.ToTable("Facturas", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_Facturas_TipoPersona",
+                    "\"TipoPersona\" IN ('Fisica','Moral')");
+
+                table.HasCheckConstraint(
+                    "CK_Facturas_Estatus",
+                    "\"Estatus\" IN ('Borrador','Emitida','Anulada')");
+
+                table.HasCheckConstraint(
+                    "CK_Facturas_UsoCfdi",
+                    "\"UsoCfdi\" IN ('G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08',"
+                    + "'D01','D02','D03','D04','D06','D07','D08','D09','D10','S01','CP01','CN01')");
+
+                table.HasCheckConstraint(
+                    "CK_Facturas_RegimenFiscal",
+                    "\"RegimenFiscal\" IN ('601','603','605','606','607','608','610','611','612','614',"
+                    + "'615','616','621','622','623','624','625','626')");
+
+                table.HasCheckConstraint(
+                    "CK_Facturas_Totales",
+                    "\"Subtotal\" >= 0 AND \"Iva\" >= 0 AND \"Total\" >= 0");
+            });
+
+            entity.HasIndex(f => f.PagoId).IsUnique();
+            entity.HasIndex(f => f.RFC);
+            entity.HasIndex(f => f.FechaEmision);
+            entity.HasIndex(f => f.IsActive);
+        });
+
+        modelBuilder.Entity<DatosFiscalesClinica>(entity =>
+        {
+            entity.HasKey(d => d.Id);
+
+            entity.Property(d => d.RegimenFiscal).HasConversion(
+                v => ((int)v).ToString(),
+                v => (RegimenFiscal)int.Parse(v));
+
+            entity.Property(d => d.RazonSocial).HasMaxLength(200).IsRequired();
+            entity.Property(d => d.RFC).HasMaxLength(13).IsRequired();
+            entity.Property(d => d.CodigoPostal).HasMaxLength(5).IsRequired();
+            entity.Property(d => d.Direccion).HasMaxLength(300);
+            entity.Property(d => d.Telefono).HasMaxLength(30);
+            entity.Property(d => d.Correo).HasMaxLength(150);
+            entity.Property(d => d.LogoUrl).HasMaxLength(1000);
+            entity.Property(d => d.Serie).HasMaxLength(10).IsRequired();
+            entity.Property(d => d.TarifaIva).HasPrecision(5, 2);
+
+            entity.ToTable("DatosFiscalesClinica", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_DatosFiscalesClinica_RegimenFiscal",
+                    "\"RegimenFiscal\" IN ('601','603','605','606','607','608','610','611','612','614',"
+                    + "'615','616','621','622','623','624','625','626')");
+
+                table.HasCheckConstraint(
+                    "CK_DatosFiscalesClinica_TarifaIva",
+                    "\"TarifaIva\" >= 0 AND \"TarifaIva\" <= 100");
+            });
         });
     }
 }

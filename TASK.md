@@ -175,7 +175,7 @@ a platos) y la plantilla solo desaparece del catálogo. Verificado en vivo (8/8 
 
 ---
 
-### Módulo Transacciones (Pagos + Facturación) — EN PROGRESO (2026-10-26)
+### Módulo Transacciones (Pagos + Facturación) — COMPLETADO (2026-10-27)
 
 Cobro posterior al **cierre de la consulta**: pago → comprobante PDF → factura con datos fiscales.
 Especificación completa para codificar en `tasks-user.md`.
@@ -193,24 +193,31 @@ Especificación completa para codificar en `tasks-user.md`.
 
 | Parte | Quién |
 |---|---|
-| Enums (6), entidades (3), controllers | **tú** |
-| Config EF + migración, DTOs, validadores, servicios (409/folios/totales), DI, QuestPDF (2 PDFs), seed, pruebas | yo |
+| Enums (6), entidades (3) | **tú** |
+| Config EF + migración, DTOs, validadores, servicios (409/folios/totales), DI, QuestPDF (2 PDFs), seed, pruebas, controllers | yo |
 
-- [ ] **Tú — Tarea 1**: 6 enums (`MetodoPago`, `EstadoPago`, `TipoPersona`, `UsoCfdi`,
+- [x] **Tú — Tarea 1**: 6 enums (`MetodoPago`, `EstadoPago`, `TipoPersona`, `UsoCfdi`,
   `RegimenFiscal`, `EstatusFactura`) — spec exacta en `tasks-user.md`
-- [ ] **Tú — Tarea 2**: 3 entidades (`Pago`, `Factura`, `DatosFiscalesClinica`)
-- [ ] **Yo**: config `ApplicationDbContext` (FKs a `Consulta`/`Paciente`/`Pago`, índices únicos
+- [x] **Tú — Tarea 2**: 3 entidades (`Pago`, `Factura`, `DatosFiscalesClinica`)
+- [x] **Yo**: config `ApplicationDbContext` (FKs a `Consulta`/`Paciente`/`Pago`, índices únicos
   `ConsultaId` y `PagoId`, enums → string + check constraints, `RegimenFiscal` → clave SAT como
-  texto) + migración aplicada
-- [ ] **Yo**: DTOs (`Crear`/`Respuesta`/`Filtro` de Pago y Factura + config) y validadores
+  texto) + migración `20261028030615_AgregarPagosYFacturas` aplicada
+- [x] **Yo**: DTOs (`Crear`/`Respuesta`/`Filtro` de Pago y Factura + config) y validadores
   (RFC 12–13, CP 5, TipoPersona↔Régimen, Monto > 0)
-- [ ] **Yo**: `PagoService` (400 si consulta abierta, 409 si ya pagada/anulada, folio, anulación)
+- [x] **Yo**: `PagoService` (400 si consulta abierta, 409 si ya pagada/anulada, folio, anulación)
   y `FacturaService` (409, totales con IVA, Serie+Folio)
-- [ ] **Yo**: QuestPDF NuGet + `LicenseType.Community` — PDF comprobante de pago y PDF factura;
+- [x] **Yo**: QuestPDF 2026.9.1 + `LicenseType.Community` — PDF comprobante de pago y PDF factura;
   seed de `DatosFiscalesClinica`; registro en DI
-- [ ] **Yo**: pruebas en vivo → `tasks-user.md`
-- [ ] **Tú — Tarea 3**: `PagosController` (5 endpoints), `FacturasController` (3), config datos
-  fiscales (GET/PUT) — cuando yo avise
+- [x] **Yo**: controllers `PagosController` (6 endpoints), `FacturasController` (4),
+  `ConfiguracionController` (GET/PUT datos fiscales)
+- [x] **Yo**: pruebas en vivo (24/24) → detalle en `tasks-user.md`
+- [x] **Extra**: `CitaService.ValidarDisponibilidadAgendaAsync` ahora lanza `ConflictException`
+  (409) en vez de `Exception` genérica (500)
+
+> **Resultado de pruebas (2026-10-27):** 24/24 OK — pago con consulta abierta 400, pago 201,
+> doble pago 409, anulación 200, re-anulación 409, pago anulado no facturable 409, re-pago 201,
+> factura 201 (subtotal 431.03 + IVA 68.97 = 500.00), factura duplicada 409, pago facturado no
+> anulable 409, ambos PDFs con firma `%PDF`, RFC inválido 400, sin token 401, cita solapada 409.
 
 ---
 

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
+using nutriclinica_backend.Core.Enums;
 using nutriclinica_backend.Features.Auth.Services;
 
 namespace nutriclinica_backend.Infrastructure.Persistence;
@@ -11,6 +12,11 @@ public static class Seeder
         IConfiguration configuration,
         ILogger logger)
     {
+        using var scope = services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        await SeedDatosFiscalesAsync(context, logger);
+
         var correo = configuration["Seed:AdminCorreo"];
         var contrasena = configuration["Seed:AdminContrasena"];
 
@@ -26,9 +32,6 @@ public static class Seeder
             logger.LogError("Seed omitido: Seed__AdminContrasena debe tener al menos 8 caracteres.");
             return;
         }
-
-        using var scope = services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var correoNormalizado = correo.Trim().ToLower();
         var existe = await context.Nutricionistas
@@ -49,5 +52,31 @@ public static class Seeder
         await context.SaveChangesAsync();
 
         logger.LogInformation("Usuario administrador creado: {Correo}", admin.CorreoElectronico);
+    }
+
+    private static async Task SeedDatosFiscalesAsync(
+        ApplicationDbContext context,
+        ILogger logger)
+    {
+        if (await context.DatosFiscalesClinica.AnyAsync()) return;
+
+        context.DatosFiscalesClinica.Add(new DatosFiscalesClinica
+        {
+            Id = Guid.NewGuid(),
+            RazonSocial = "NutriClínica S.A. de C.V.",
+            RFC = "NUT250101AB1",
+            RegimenFiscal = RegimenFiscal.GeneralDeLeyPersonasMorales,
+            CodigoPostal = "64000",
+            Direccion = "Av. Constitución 1000, Centro, Monterrey, N.L.",
+            Telefono = "8180000000",
+            Correo = "contacto@nutriclinica.cl",
+            Serie = "A",
+            TarifaIva = 16m,
+            FechaActualizacion = DateTime.UtcNow
+        });
+
+        await context.SaveChangesAsync();
+
+        logger.LogInformation("Datos fiscales de la clinica creados con valores por defecto.");
     }
 }

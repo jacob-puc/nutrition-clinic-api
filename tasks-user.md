@@ -202,7 +202,7 @@ referenciara (huérfano: ocupa espacio y, peor, la foto del paciente sigue exist
 
 ---
 
-# 💳 Módulo Transacciones (Pagos + Facturación) — EN PROGRESO (2026-10-26)
+# 💳 Módulo Transacciones (Pagos + Facturación) — COMPLETADO (2026-10-27)
 
 Cobro posterior al cierre de la consulta: **pago → comprobante PDF → factura con datos fiscales**.
 
@@ -219,11 +219,11 @@ Cobro posterior al cierre de la consulta: **pago → comprobante PDF → factura
 
 | Parte | Quién |
 |---|---|
-| Enums (6), entidades (3), controllers | **tú** |
-| Config EF + migración, DTOs, validadores, servicios (reglas 409/folios/totales), DI, QuestPDF (2 PDFs), seed, pruebas en vivo | yo |
+| Enums (6), entidades (3) | **tú** ✅ |
+| Config EF + migración, DTOs, validadores, servicios (reglas 409/folios/totales), DI, QuestPDF (2 PDFs), seed, pruebas en vivo, controllers | yo ✅ |
 
 **Orden:** Tú haces **Tarea 1 (enums)** y **Tarea 2 (entidades)** primero → yo hago todo lo mío
-→ tú **Tarea 3 (controllers)** cuando yo avise (los controllers necesitan mis DTOs y servicios).
+→ controllers incluidos (el usuario pidió "termina todo").
 
 ---
 
@@ -238,7 +238,7 @@ public enum MetodoPago
     Efectivo,
     TarjetaDebito,
     TarjetaCredito,
-    TransferenciaSPEI,
+    Transferencia,
     QR,
     Otro
 }
@@ -483,22 +483,23 @@ public class DatosFiscalesClinica
 
 ---
 
-## Tarea 3 (tuya, AL FINAL — cuando yo avise): controllers
+## Tarea 3: controllers — COMPLETADO por el asistente (2026-10-27)
 
-Los endpoints, contra los servicios que voy a crear:
+Los endpoints implementados:
 
 | Método | Ruta | Acción → servicio |
 |---|---|---|
 | `POST` | `/api/pagos` | `CrearPagoAsync(dto)` → **201** |
 | `GET` | `/api/pagos` | `ObtenerPagosAsync(filtro)` → envelope paginado |
 | `GET` | `/api/pagos/{id:guid}` | `ObtenerPagoPorIdAsync(id)` → 200/404 |
-| `POST` | `/api/pagos/{id:guid}/anular` | `AnularPagoAsync(id, motivo)` → 200/404/409 |
-| `GET` | `/api/pagos/{id:guid}/comprobante` | PDF (Fase 3) |
+| `POST` | `/api/pagos/{id:guid}/anular` | `AnularPagoAsync(id, dto)` → 200/404/409 |
+| `GET` | `/api/pagos/{id:guid}/comprobante` | PDF |
 | `POST` | `/api/pagos/{id:guid}/factura` | `EmitirFacturaAsync(dto)` → **201**/409 |
+| `POST` | `/api/facturas` | `EmitirFacturaAsync(dto)` → **201**/409 |
 | `GET` | `/api/facturas` | `ObtenerFacturasAsync(filtro)` → envelope |
 | `GET` | `/api/facturas/{id:guid}` | `ObtenerFacturaPorIdAsync(id)` → 200/404 |
-| `GET` | `/api/facturas/{id:guid}/pdf` | PDF (Fase 3) |
-| `GET`/`PUT` | `/api/configuracion/datos-fiscales` | `ObtenerDatosFiscalesAsync()` / `ActualizarDatosFiscalesAsync(dto)` |
+| `GET` | `/api/facturas/{id:guid}/pdf` | PDF |
+| `GET`/`PUT` | `/api/configuracion/datos-fiscales` | `ObtenerAsync()` / `ActualizarAsync(dto)` |
 
 Contrato de servicios que voy a implementar (para que puedas armar los controllers):
 
@@ -533,6 +534,39 @@ public interface IFacturaService
 - `CrearFacturaDto`: RFC con regex `^([A-ZÑ&]{3,4}\d{6}[A-Z\d]{3})$` (12–13), CP 5 dígitos,
   `TipoPersona` ↔ `RegimenFiscal` compatibles (601/603/622/623/624 = Moral;
   605/606/607/608/611/612/614/615/616/621/625 = Física; 610/626 = ambas).
+
+---
+
+## ✅ Pruebas en vivo (2026-10-27, `https://localhost:7140`) — 24/24 OK
+
+Migración `20261028030615_AgregarPagosYFacturas` aplicada al arrancar y seed de
+`DatosFiscalesClinica` creado (RFC placeholder `NUT250101AB1`, serie `A`, IVA 16%).
+
+| # | Escenario | Resultado |
+|---|---|---|
+| 1 | Pago sobre consulta **abierta** | 400 `VALIDACION` |
+| 2 | Cerrar consulta | 200 |
+| 3 | Crear pago (consulta cerrada) | 201, recibo `REC-2026-0001` |
+| 4 | Segundo pago sobre la misma consulta | 409 |
+| 5 | Listar pagos / pago por id | 200 / 200 |
+| 6 | Comprobante PDF | 200, firma `%PDF` (35.9 KB) |
+| 7 | Emitir factura (RFC físico válido, régimen 612, uso D01) | 201, `A-1` |
+| 8 | Totales con IVA 16% | subtotal 431.03 + IVA 68.97 = **500.00** |
+| 9 | Factura duplicada del mismo pago | 409 |
+| 10 | Listar facturas / factura por id | 200 / 200 |
+| 11 | PDF factura | 200, firma `%PDF` (37.6 KB) |
+| 12 | Anular pago **con factura** | 409 |
+| 13 | Pago en consulta 2 → anular → re-anular | 201 → 200 (`Estado=Anulado`) → 409 |
+| 14 | Facturar pago anulado | 409 |
+| 15 | Re-pagar consulta 2 (recibo `REC-2026-0003`, el 0002 quedó anulado) | 201 |
+| 16 | `GET` / `PUT` datos fiscales | 200 / 200 |
+| 17 | Factura con RFC inválido | 400 |
+| 18 | Pago inexistente | 404 |
+| 19 | Sin token | 401 |
+| 20 | Cita solapada (fix de agenda del usuario) | 409 |
+
+> **Nota de negocio:** el índice único filtrado `"Estado" = 'Pagado'` permite re-cobrar una
+> consulta después de anular el pago, conservando el recibo anulado como historial.
 
 ---
 
