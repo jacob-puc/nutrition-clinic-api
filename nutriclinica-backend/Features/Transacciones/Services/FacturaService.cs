@@ -110,6 +110,11 @@ public class FacturaService : IFacturaService
             query = query.Where(f => f.Estatus == filtro.Estatus.Value);
         }
 
+        if (filtro.PacienteId.HasValue)
+        {
+            query = query.Where(f => f.Pago.PacienteId == filtro.PacienteId.Value);
+        }
+
         if (!string.IsNullOrWhiteSpace(filtro.RFC))
         {
             var rfc = filtro.RFC.Trim().ToUpperInvariant();
