@@ -1,4 +1,5 @@
 using nutriclinica_backend.Features.Reportes.Services;
+using nutriclinica_backend.Features.Agenda.Services;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -116,6 +117,7 @@ builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IFacturaService, FacturaService>();
 builder.Services.AddScoped<IDatosFiscalesClinicaService, DatosFiscalesClinicaService>();
 builder.Services.AddScoped<IReporteService, ReporteService>();
+builder.Services.AddScoped<IAgendaService, AgendaService>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
@@ -177,6 +179,7 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseCors("Frontend");
 
 app.UseAuthentication();
+app.UseMiddleware<CambioContrasenaMiddleware>();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");

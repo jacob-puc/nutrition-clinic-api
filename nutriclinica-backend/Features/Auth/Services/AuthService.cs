@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using nutriclinica_backend.Core.Entities;
 using nutriclinica_backend.Features.Auth.DTOs;
 using nutriclinica_backend.Features.Auth.Interfaces;
+using nutriclinica_backend.Features.Nutricionistas.Services;
 using nutriclinica_backend.Infrastructure.Persistence;
 using nutriclinica_backend.Infrastructure.Security;
 
@@ -98,6 +99,32 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync();
     }
 
+    public async Task<TokenRespuestaDto> CambiarContrasenaAsync(Guid nutricionistaId, CambiarContrasenaDto dto)
+    {
+        var nutricionista = await _context.Nutricionistas
+            .FirstOrDefaultAsync(n => n.Id == nutricionistaId && n.IsActive)
+            ?? throw new UnauthorizedAccessException("La cuenta se encuentra inactiva.");
+
+        if (!VerificarContrasena(nutricionista, dto.ContrasenaActual))
+        {
+            throw new ValidationException(
+                [new FluentValidation.Results.ValidationFailure("ContrasenaActual", "La contraseña actual no es correcta.")]);
+        }
+
+        if (dto.ContrasenaActual == dto.ContrasenaNueva)
+        {
+            throw new ValidationException(
+                [new FluentValidation.Results.ValidationFailure("ContrasenaNueva", "La contraseña nueva debe ser distinta de la actual.")]);
+        }
+
+        NutricionistaService.ValidarContrasena(dto.ContrasenaNueva);
+
+        nutricionista.PasswordHash = _hasher.HashPassword(nutricionista, dto.ContrasenaNueva);
+        nutricionista.DebeCambiarContrasena = false;
+
+        return await EmitirTokensAsync(nutricionista);
+    }
+
     private bool VerificarContrasena(Nutricionista nutricionista, string contrasena)
     {
         if (string.IsNullOrEmpty(nutricionista.PasswordHash)) return false;
@@ -123,8 +150,14 @@ public class AuthService : IAuthService
             new(JwtRegisteredClaimNames.Sub, nutricionista.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, nutricionista.CorreoElectronico),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(ClaimTypes.NameIdentifier, nutricionista.Id.ToString())
+            new(ClaimTypes.NameIdentifier, nutricionista.Id.ToString()),
+            new(ClaimTypes.Role, nutricionista.Rol.ToString())
         };
+
+        if (nutricionista.DebeCambiarContrasena)
+        {
+            claims.Add(new Claim(Roles.ClaimCambiarContrasena, "true"));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfig.Secret));
 
@@ -150,7 +183,9 @@ public class AuthService : IAuthService
             ExpiraEnSegundos = (int)(expiracion - ahora).TotalSeconds,
             NutricionistaId = nutricionista.Id,
             NombreCompleto = nutricionista.NombreCompleto,
-            CorreoElectronico = nutricionista.CorreoElectronico
+            CorreoElectronico = nutricionista.CorreoElectronico,
+            Rol = nutricionista.Rol,
+            DebeCambiarContrasena = nutricionista.DebeCambiarContrasena
         };
     }
 

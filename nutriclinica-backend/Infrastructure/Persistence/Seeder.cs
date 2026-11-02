@@ -44,6 +44,7 @@ public static class Seeder
             NombreCompleto = configuration["Seed:AdminNombre"] ?? "Nutricionista Administrador",
             CorreoElectronico = correoNormalizado,
             Especialidad = configuration["Seed:AdminEspecialidad"],
+            Rol = RolUsuario.Administrador,
             IsActive = true,
             PasswordHash = AuthService.HashPassword(new Nutricionista(), contrasena)
         };

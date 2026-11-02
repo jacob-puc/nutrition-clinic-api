@@ -18,6 +18,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Cita> Citas => Set<Cita>();
     public DbSet<Consulta> Consultas => Set<Consulta>();
     public DbSet<Nutricionista> Nutricionistas => Set<Nutricionista>();
+    public DbSet<HorarioAtencion> HorariosAtencion => Set<HorarioAtencion>();
+    public DbSet<Ausencia> Ausencias => Set<Ausencia>();
     public DbSet<Alimento> Alimentos => Set<Alimento>();
     public DbSet<Plato> Platos => Set<Plato>();
     public DbSet<DetallePlato> DetallesPlato => Set<DetallePlato>();
@@ -166,12 +168,36 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(c => c.NutricionistaId);
         });
 
+        modelBuilder.Entity<HorarioAtencion>(entity =>
+        {
+            entity.HasKey(h => h.Id);
+            entity.HasOne(h => h.Nutricionista)
+                .WithMany(n => n.Horarios)
+                .HasForeignKey(h => h.NutricionistaId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(h => h.DiaSemana).HasConversion<string>().HasMaxLength(20);
+            entity.HasIndex(h => new { h.NutricionistaId, h.DiaSemana });
+        });
+
+        modelBuilder.Entity<Ausencia>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.HasOne(a => a.Nutricionista)
+                .WithMany(n => n.Ausencias)
+                .HasForeignKey(a => a.NutricionistaId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(a => a.Motivo).HasMaxLength(150);
+            entity.HasIndex(a => new { a.NutricionistaId, a.FechaInicio, a.FechaFin });
+        });
+
         modelBuilder.Entity<Nutricionista>(entity =>
         {
             entity.HasKey(n => n.Id);
 
             entity.Property(n => n.NombreCompleto).HasMaxLength(100);
             entity.Property(n => n.Especialidad).HasMaxLength(100);
+            entity.Property(n => n.Rol).HasConversion<string>().HasMaxLength(20);
+            entity.Property(n => n.DuracionConsultaMinutos).HasDefaultValue(60);
 
             entity.HasIndex(n => n.CorreoElectronico)
                 .IsUnique()

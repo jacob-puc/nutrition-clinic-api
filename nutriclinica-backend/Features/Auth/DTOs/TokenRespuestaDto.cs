@@ -1,3 +1,5 @@
+using nutriclinica_backend.Core.Enums;
+
 namespace nutriclinica_backend.Features.Auth.DTOs;
 
 public class TokenRespuestaDto
@@ -9,4 +11,6 @@ public class TokenRespuestaDto
     public Guid NutricionistaId { get; set; }
     public string NombreCompleto { get; set; } = string.Empty;
     public string CorreoElectronico { get; set; } = string.Empty;
+    public RolUsuario Rol { get; set; }
+    public bool DebeCambiarContrasena { get; set; }
 }

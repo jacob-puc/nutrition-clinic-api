@@ -1,3 +1,4 @@
+using nutriclinica_backend.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Core.DTOs;
@@ -26,15 +27,25 @@ public class ConsultasController : ControllerBase
     public async Task<ActionResult<RespuestaPaginadaDto<ConsultaRespuestaDto>>> ObtenerConsultas(
         [FromQuery] ConsultaFiltroDto filtro)
     {
-        return Ok(await _consultaService.ObtenerConsultasAsync(filtro));
+        var pagina = await _consultaService.ObtenerConsultasAsync(filtro);
+
+        /* Recepcion necesita la lista para cobrar, pero no las notas clinicas. */
+        if (User.EsRecepcion())
+        {
+            foreach (var consulta in pagina.Datos) consulta.NotasClinicas = null;
+        }
+
+        return Ok(pagina);
     }
 
+    [Authorize(Roles = Roles.Clinicos)]
     [HttpGet("{consultaId:guid}")]
     public async Task<ActionResult<ConsultaRespuestaDto>> ObtenerConsultaPorId(Guid consultaId)
     {
         return Ok(await _consultaService.ObtenerConsultaPorIdAsync(consultaId));
     }
 
+    [Authorize(Roles = Roles.Clinicos)]
     [HttpGet("cita/{citaId:guid}")]
     public async Task<ActionResult<ConsultaRespuestaDto>> ObtenerConsultaPorCita(Guid citaId)
     {
@@ -48,6 +59,7 @@ public class ConsultasController : ControllerBase
         return Ok(consulta);
     }
 
+    [Authorize(Roles = Roles.Clinicos)]
     [HttpPost]
     public async Task<ActionResult<ConsultaRespuestaDto>> CrearConsulta([FromBody] CrearConsultaDto dto)
     {
@@ -55,6 +67,7 @@ public class ConsultasController : ControllerBase
         return CreatedAtAction(nameof(ObtenerConsultaPorId), new { consultaId = consulta.Id }, consulta);
     }
 
+    [Authorize(Roles = Roles.Clinicos)]
     [HttpPatch("{consultaId:guid}/cerrar")]
     public async Task<ActionResult<ConsultaRespuestaDto>> CerrarConsulta(
         Guid consultaId,
@@ -69,7 +82,7 @@ public class ConsultasController : ControllerBase
 /// consulta, asi que el cliente nunca envia el pacienteId ni el consultaId por separado.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Roles = Roles.Clinicos)]
 [Route("api/consultas/{consultaId:guid}")]
 public class ConsultasRegistrosController : ControllerBase
 {

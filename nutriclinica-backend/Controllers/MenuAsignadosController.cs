@@ -1,3 +1,4 @@
+using nutriclinica_backend.Infrastructure.Security;
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.Menus.DTOs;
@@ -6,7 +7,7 @@ using nutriclinica_backend.Features.Menus.Interfaces;
 namespace nutriclinica_backend.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = Roles.Clinicos)]
 [Route("api/menu-asignados")]
 public class MenuAsignadosController : ControllerBase
 {

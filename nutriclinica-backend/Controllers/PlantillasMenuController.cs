@@ -1,3 +1,4 @@
+using nutriclinica_backend.Infrastructure.Security;
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.Menus.DTOs;
@@ -7,7 +8,7 @@ namespace nutriclinica_backend.Controllers;
 
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = Roles.Clinicos)]
 [Route("api/plantillas-menu")] 
 public class PlantillasMenuController : ControllerBase 
 {

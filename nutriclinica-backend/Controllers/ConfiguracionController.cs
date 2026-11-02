@@ -1,3 +1,4 @@
+using nutriclinica_backend.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.Transacciones.DTOs;
@@ -23,6 +24,7 @@ public class ConfiguracionController : ControllerBase
         return Ok(await _datosFiscalesService.ObtenerAsync());
     }
 
+    [Authorize(Roles = Roles.Administrador)]
     [HttpPut]
     public async Task<ActionResult<DatosFiscalesClinicaRespuestaDto>> ActualizarDatosFiscales(
         [FromBody] ActualizarDatosFiscalesClinicaDto dto)

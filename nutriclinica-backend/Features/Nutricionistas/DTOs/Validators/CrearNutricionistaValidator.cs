@@ -26,5 +26,11 @@ public class CrearNutricionistaValidator : AbstractValidator<CrearNutricionistaD
         RuleFor(x => x.Especialidad)
             .MaximumLength(100).WithMessage("La especialidad no puede tener más de 100 caracteres")
             .When(x => !string.IsNullOrEmpty(x.Especialidad));
+
+        RuleFor(x => x.Rol)
+            .IsInEnum().WithMessage("El rol no es válido");
+
+        RuleFor(x => x.Contrasena)
+            .NotEmpty().WithMessage("La contraseña temporal es requerida");
     }
 }

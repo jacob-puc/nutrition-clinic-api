@@ -5,6 +5,7 @@ using nutriclinica_backend.Features.Auth.DTOs;
 using nutriclinica_backend.Features.Auth.Interfaces;
 using nutriclinica_backend.Features.Nutricionistas.DTOs;
 using nutriclinica_backend.Features.Nutricionistas.Interfaces;
+using nutriclinica_backend.Infrastructure.Security;
 
 namespace nutriclinica_backend.Features.Auth.Controllers;
 
@@ -53,5 +54,23 @@ public class AuthController : ControllerBase
         var id = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var nutricionista = await _nutricionistaService.ObtenerNutricionistaPorIdAsync(id);
         return Ok(nutricionista);
+    }
+
+    /// <summary>Mi perfil: datos de contacto y profesionales propios. El rol no se toca aqui.</summary>
+    [HttpPut("yo")]
+    [Authorize]
+    public async Task<ActionResult<NutricionistaRespuestaDto>> ActualizarPerfil(
+        [FromBody] ActualizarNutricionistaDto dto)
+    {
+        var id = User.ObtenerId();
+        dto.Rol = null;
+        return Ok(await _nutricionistaService.ActualizarNutricionistaAsync(id, dto, id, User.EsAdministrador()));
+    }
+
+    [HttpPost("cambiar-contrasena")]
+    [Authorize]
+    public async Task<ActionResult<TokenRespuestaDto>> CambiarContrasena([FromBody] CambiarContrasenaDto dto)
+    {
+        return Ok(await _authService.CambiarContrasenaAsync(User.ObtenerId(), dto));
     }
 }

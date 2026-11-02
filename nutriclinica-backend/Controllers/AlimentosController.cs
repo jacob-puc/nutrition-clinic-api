@@ -1,3 +1,4 @@
+using nutriclinica_backend.Infrastructure.Security;
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.Alimentos.DTOs;
@@ -6,7 +7,7 @@ using nutriclinica_backend.Features.Alimentos.Interfaces;
 namespace nutriclinica_backend.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = Roles.Clinicos)]
 [Route("api/alimentos")]
 public class AlimentosController : ControllerBase
 {

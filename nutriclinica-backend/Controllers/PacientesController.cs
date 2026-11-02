@@ -1,3 +1,4 @@
+using nutriclinica_backend.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using nutriclinica_backend.Features.Pacientes.DTOs;
@@ -36,6 +37,7 @@ public class PacientesController : ControllerBase
         return CreatedAtAction(nameof(ObtenerPacientePorId), new { id = paciente.Id }, paciente);
     }
 
+    [Authorize(Roles = Roles.Clinicos)]
     [HttpGet("{id:guid}/expediente")]
     public async Task<ActionResult<ExpedienteCompletoDto>> ObtenerExpedienteCompleto(Guid id)
     {
@@ -49,6 +51,7 @@ public class PacientesController : ControllerBase
     }
 
     /// <summary>El objetivo se define en consulta, no al alta, asi que va aparte del CRUD del paciente.</summary>
+    [Authorize(Roles = Roles.Clinicos)]
     [HttpPut("{id:guid}/objetivo")]
     public async Task<ActionResult<PacienteRespuestaDto>> ActualizarObjetivo(
         Guid id,

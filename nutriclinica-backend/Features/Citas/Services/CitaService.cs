@@ -4,6 +4,7 @@ using nutriclinica_backend.Core.DTOs;
 using nutriclinica_backend.Core.Entities;
 using nutriclinica_backend.Core.Enums;
 using nutriclinica_backend.Core.Exceptions;
+using nutriclinica_backend.Features.Agenda.Services;
 using nutriclinica_backend.Features.Citas.DTOs;
 using nutriclinica_backend.Features.Citas.Interfaces;
 using nutriclinica_backend.Infrastructure.Persistence;
@@ -34,14 +35,17 @@ public class CitaService : ICitaService
     private readonly IValidator<CrearCitaDto> _crearCitaValidator;
     private readonly IValidator<ActualizarCitaDto> _actualizarCitaValidator;
     private readonly IValidator<CambiarEstadoCitaDto> _cambiarEstadoCitaValidator;
+    private readonly IAgendaService _agenda;
 
     public CitaService(
         ApplicationDbContext context,
         IValidator<CrearCitaDto> crearCitaValidator,
         IValidator<ActualizarCitaDto> actualizarCitaValidator,
-        IValidator<CambiarEstadoCitaDto> cambiarEstadoCitaValidator)
+        IValidator<CambiarEstadoCitaDto> cambiarEstadoCitaValidator,
+        IAgendaService agenda)
     {
         _context = context;
+        _agenda = agenda;
         _crearCitaValidator = crearCitaValidator;
         _actualizarCitaValidator = actualizarCitaValidator;
         _cambiarEstadoCitaValidator = cambiarEstadoCitaValidator;
@@ -60,7 +64,9 @@ public class CitaService : ICitaService
             .AsNoTracking()
             .FirstOrDefaultAsync(n => n.Id == dto.NutricionistaId && n.IsActive)
             ?? throw new KeyNotFoundException($"No se encontró un nutricionista activo con ID: {dto.NutricionistaId}");
-        
+        ValidarQueAtiende(nutricionista);
+        await ValidarHorarioAsync(dto.NutricionistaId, dto.FechaInicio, dto.FechaFin);
+
         await ValidarDisponibilidadAgendaAsync(dto.NutricionistaId, dto.PacienteId, dto.FechaInicio, dto.FechaFin);
 
         var cita = new Cita
@@ -98,11 +104,20 @@ public class CitaService : ICitaService
             .AsNoTracking()
             .FirstOrDefaultAsync(n => n.Id == dto.NutricionistaId && n.IsActive)
             ?? throw new KeyNotFoundException($"No se encontró un nutricionista activo con ID: {dto.NutricionistaId}");
+        ValidarQueAtiende(nutricionista);
 
         var paciente = await _context.Pacientes
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == cita.PacienteId && p.IsActive)
             ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {cita.PacienteId}");
+        /* Solo si cambia la franja o quien atiende: editar el motivo de una
+           cita vieja no debe fallar porque despues cambio el horario. */
+        var cambiaFranja = cita.NutricionistaId != dto.NutricionistaId
+                           || cita.FechaInicio != dto.FechaInicio
+                           || cita.FechaFin != dto.FechaFin;
+        if (cambiaFranja)
+            await ValidarHorarioAsync(dto.NutricionistaId, dto.FechaInicio, dto.FechaFin);
+
         await ValidarDisponibilidadAgendaAsync(dto.NutricionistaId, cita.PacienteId, dto.FechaInicio, dto.FechaFin, citaId);
 
         cita.NutricionistaId = dto.NutricionistaId;
@@ -296,6 +311,23 @@ public class CitaService : ICitaService
             throw new ConflictException("El paciente ya tiene una cita en el horario seleccionado.");
         }
     }
+    /// <summary>Horario de atencion y ausencias de quien atiende (409, como los choques).</summary>
+    private async Task ValidarHorarioAsync(Guid nutricionistaId, DateTime inicio, DateTime fin)
+    {
+        var motivo = await _agenda.MotivoNoDisponibleAsync(nutricionistaId, inicio, fin);
+        if (motivo is not null) throw new ConflictException(motivo);
+    }
+
+    /// <summary>Las cuentas de recepcion agendan, pero no se les puede asignar una cita.</summary>
+    private static void ValidarQueAtiende(Nutricionista nutricionista)
+    {
+        if (nutricionista.Rol == RolUsuario.Recepcion)
+        {
+            throw new ValidationException(
+                [new FluentValidation.Results.ValidationFailure("NutricionistaId", "Recepción no atiende pacientes: elige a un nutricionista.")]);
+        }
+    }
+
     private static bool EsTerminal(EstadoCita estado) =>
         TransicionesPermitidas[estado].Length == 0;
 
