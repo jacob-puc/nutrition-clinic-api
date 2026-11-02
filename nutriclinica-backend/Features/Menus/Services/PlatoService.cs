@@ -132,7 +132,7 @@ public class PlatoService : IPlatoService
             ?? throw new KeyNotFoundException($"No se encontró un plato con ID: {platoId}");
 
         var detalles = plato.Detalles.OrderBy(d => d.Orden).ToList();
-        var alimentos = await CargarAlimentosAsync(detalles.Select(d => d.AlimentoId));
+        var alimentos = await CargarAlimentosAsync(detalles.Select(d => d.AlimentoId), soloActivos: false);
 
         return await MapearPlatoAsync(plato, detalles, alimentos);
     }
@@ -287,13 +287,22 @@ public class PlatoService : IPlatoService
         }
     }
 
-    private async Task<Dictionary<Guid, Alimento>> CargarAlimentosAsync(IEnumerable<Guid> ids)
+    /// <summary>
+    /// Carga los alimentos de los detalles. Al crear o editar un plato se exigen
+    /// activos (no se arman platos nuevos con alimentos eliminados); al LEER se
+    /// admiten los eliminados, porque el borrado es logico y el plato que ya los
+    /// usaba debe seguir mostrandose con sus macros. Antes, eliminar un solo
+    /// alimento hacia que GET /api/platos respondiera 404 para toda la lista.
+    /// </summary>
+    private async Task<Dictionary<Guid, Alimento>> CargarAlimentosAsync(
+        IEnumerable<Guid> ids,
+        bool soloActivos = true)
     {
         var lista = ids.Distinct().ToList();
 
         var alimentos = await _context.Alimentos
             .AsNoTracking()
-            .Where(a => lista.Contains(a.Id) && a.IsActive)
+            .Where(a => lista.Contains(a.Id) && (!soloActivos || a.IsActive))
             .ToDictionaryAsync(a => a.Id);
 
         var faltantes = lista.Except(alimentos.Keys).ToList();
@@ -301,7 +310,7 @@ public class PlatoService : IPlatoService
         if (faltantes.Any())
         {
             throw new KeyNotFoundException(
-                $"No se encontraron los siguientes alimentos activos: {string.Join(", ", faltantes)}");
+                $"No se encontraron los siguientes alimentos{(soloActivos ? " activos" : "")}: {string.Join(", ", faltantes)}");
         }
 
         return alimentos;
@@ -329,7 +338,7 @@ public class PlatoService : IPlatoService
     private async Task<List<PlatoRespuestaDto>> MapearPlatosAsync(List<Plato> platos)
     {
         var todosLosIds = platos.SelectMany(p => p.Detalles).Select(d => d.AlimentoId).Distinct();
-        var alimentos = await CargarAlimentosAsync(todosLosIds);
+        var alimentos = await CargarAlimentosAsync(todosLosIds, soloActivos: false);
 
         return platos
             .Select(p => MapearPlato(p, p.Detalles.OrderBy(d => d.Orden).ToList(), alimentos))
