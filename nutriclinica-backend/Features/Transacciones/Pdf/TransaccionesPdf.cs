@@ -3,6 +3,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using nutriclinica_backend.Core.Entities;
+using nutriclinica_backend.Core.Utils;
 
 namespace nutriclinica_backend.Features.Transacciones.Pdf;
 
@@ -52,7 +53,7 @@ public static class TransaccionesPdf
                     {
                         col.Item().Text("COMPROBANTE DE PAGO").FontSize(13).Bold();
                         col.Item().Text($"Folio: {pago.NumeroRecibo}");
-                        col.Item().Text($"Fecha: {pago.FechaPago.ToString("dd/MM/yyyy HH:mm", CulturaMx)}");
+                        col.Item().Text($"Fecha: {ZonaClinica.FechaHora(pago.FechaPago)}");
                     });
                 });
 
@@ -93,7 +94,7 @@ public static class TransaccionesPdf
                 {
                     col.Item().Text("Este comprobante es un recibo interno y no constituye un CFDI.")
                         .FontSize(8).FontColor(Colors.Grey.Darken1);
-                    col.Item().Text($"Generado el {DateTime.Now.ToString("dd/MM/yyyy HH:mm", CulturaMx)}")
+                    col.Item().Text($"Generado el {ZonaClinica.FechaHora(DateTime.UtcNow)}")
                         .FontSize(8).FontColor(Colors.Grey.Darken1);
                 });
             });
@@ -129,7 +130,7 @@ public static class TransaccionesPdf
                         if (clinica is not null)
                         {
                             col.Item().Text($"RFC: {clinica.RFC}");
-                            col.Item().Text($"Régimen fiscal: {(int)clinica.RegimenFiscal}");
+                            col.Item().Text($"Régimen fiscal: {CatalogosSat.Regimen(clinica.RegimenFiscal)}");
                             col.Item().Text($"CP: {clinica.CodigoPostal}");
                             col.Item().Text(clinica.Direccion);
                         }
@@ -139,7 +140,7 @@ public static class TransaccionesPdf
                     {
                         col.Item().Text("FACTURA").FontSize(16).Bold();
                         col.Item().Text($"Serie-Folio: {factura.Serie}-{factura.Folio:D4}");
-                        col.Item().Text($"Fecha: {factura.FechaEmision.ToString("dd/MM/yyyy HH:mm", CulturaMx)}");
+                        col.Item().Text($"Fecha: {ZonaClinica.FechaHora(factura.FechaEmision)}");
                     });
                 });
 
@@ -152,9 +153,9 @@ public static class TransaccionesPdf
                     col.Item().Text("Receptor").Bold().FontSize(12).FontColor(Colors.Teal.Darken2);
                     Fila(col, "Nombre / Razón social", factura.NombreRazonSocial);
                     Fila(col, "RFC", factura.RFC);
-                    Fila(col, "Tipo de persona", factura.TipoPersona.ToString());
-                    Fila(col, "Régimen fiscal", ((int)factura.RegimenFiscal).ToString());
-                    Fila(col, "Uso de CFDI", factura.UsoCfdi.ToString());
+                    Fila(col, "Tipo de persona", CatalogosSat.Persona(factura.TipoPersona));
+                    Fila(col, "Régimen fiscal", CatalogosSat.Regimen(factura.RegimenFiscal));
+                    Fila(col, "Uso de CFDI", CatalogosSat.Uso(factura.UsoCfdi));
                     Fila(col, "Código postal", factura.CodigoPostal);
 
                     col.Item().PaddingTop(8).Text("Concepto").Bold().FontSize(12)
@@ -210,7 +211,7 @@ public static class TransaccionesPdf
 
                     col.Item().PaddingTop(8).Text(
                         $"Pago: {pago.NumeroRecibo} · {pago.MetodoPago} · " +
-                        $"{pago.FechaPago.ToString("dd/MM/yyyy HH:mm", CulturaMx)}")
+                        $"{ZonaClinica.FechaHora(pago.FechaPago)}")
                         .FontSize(9).FontColor(Colors.Grey.Darken1);
 
                     col.Item().Text($"Paciente: {pacienteNombre}")
@@ -223,7 +224,7 @@ public static class TransaccionesPdf
                             ? "Comprobante SIN timbrar (UUID pendiente) — no válido para efectos fiscales."
                             : $"UUID: {factura.UUID}")
                         .FontSize(8).FontColor(Colors.Grey.Darken1);
-                    col.Item().Text($"Generado el {DateTime.Now.ToString("dd/MM/yyyy HH:mm", CulturaMx)}")
+                    col.Item().Text($"Generado el {ZonaClinica.FechaHora(DateTime.UtcNow)}")
                         .FontSize(8).FontColor(Colors.Grey.Darken1);
                 });
             });
