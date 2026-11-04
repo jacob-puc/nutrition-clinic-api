@@ -19,6 +19,8 @@ public class CitaRespuestaDto
 
     public string? Motivo { get; set; }
 
+    public CanalCita? Canal { get; set; }
+
     public Guid? ConsultaId { get; set; }
 
     public DateTime FechaCreacion { get; set; }

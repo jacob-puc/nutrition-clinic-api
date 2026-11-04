@@ -77,6 +77,7 @@ public class CitaService : ICitaService
             FechaFin = dto.FechaFin,
             Estado = EstadoCita.Programada,
             Motivo = dto.Motivo,
+            Canal = dto.Canal,
             FechaCreacion = DateTime.UtcNow
         };
 
@@ -342,6 +343,7 @@ public class CitaService : ICitaService
         FechaFin = cita.FechaFin,
         Estado = cita.Estado,
         Motivo = cita.Motivo,
+        Canal = cita.Canal,
         ConsultaId = consultaId,
         FechaCreacion = cita.FechaCreacion,
         FechaCancelacion = cita.FechaCancelacion,

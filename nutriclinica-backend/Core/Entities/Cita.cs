@@ -19,6 +19,8 @@ public class Cita
 
     public string? Motivo { get; set; }
 
+    public CanalCita? Canal { get; set; }
+
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
     public DateTime? FechaCancelacion { get; set; }
     public string? MotivoCancelacion { get; set; }

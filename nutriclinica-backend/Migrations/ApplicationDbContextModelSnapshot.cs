@@ -112,6 +112,10 @@ namespace nutriclinica_backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Canal")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasColumnType("text");
@@ -808,6 +812,9 @@ namespace nutriclinica_backend.Migrations
                     b.Property<string>("CorreoElectronico")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("DatosPorCompletar")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Direccion")
                         .HasColumnType("text");

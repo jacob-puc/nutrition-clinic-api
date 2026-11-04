@@ -65,6 +65,8 @@ public class PacienteService : IPacienteService
         paciente.Direccion = dto.Direccion;
         paciente.FechaNacimiento = dto.FechaNacimiento;
         paciente.Sexo = dto.Sexo;
+        /* Guardar la ficha desde el sistema cuenta como revisarla. */
+        paciente.DatosPorCompletar = false;
 
         await _context.SaveChangesAsync();
 
@@ -216,6 +218,7 @@ public class PacienteService : IPacienteService
         Sexo = paciente.Sexo,
         TituloObjetivo = paciente.TituloObjetivo,
         PesoObjetivo = paciente.PesoObjetivo,
-        FechaRegistro = paciente.FechaRegistro
+        FechaRegistro = paciente.FechaRegistro,
+        DatosPorCompletar = paciente.DatosPorCompletar
     };
 }

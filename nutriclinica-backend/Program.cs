@@ -1,5 +1,9 @@
 using nutriclinica_backend.Features.Reportes.Services;
 using nutriclinica_backend.Features.Agenda.Services;
+using nutriclinica_backend.Features.Reservas.Services;
+using nutriclinica_backend.Controllers;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -118,6 +122,18 @@ builder.Services.AddScoped<IFacturaService, FacturaService>();
 builder.Services.AddScoped<IDatosFiscalesClinicaService, DatosFiscalesClinicaService>();
 builder.Services.AddScoped<IReporteService, ReporteService>();
 builder.Services.AddScoped<IAgendaService, AgendaService>();
+builder.Services.AddScoped<IReservaService, ReservaService>();
+
+/* Limites por IP para la reservacion publica (sin sesion). */
+static string IpDe(HttpContext http) => http.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(LimitesReserva.Consulta, http => RateLimitPartition.GetFixedWindowLimiter(
+        IpDe(http), _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
+    options.AddPolicy(LimitesReserva.Crear, http => RateLimitPartition.GetFixedWindowLimiter(
+        IpDe(http), _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(15) }));
+});
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
@@ -177,6 +193,7 @@ else
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseCors("Frontend");
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseMiddleware<CambioContrasenaMiddleware>();

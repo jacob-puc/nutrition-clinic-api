@@ -1,4 +1,4 @@
-﻿using nutriclinica_backend.Core.Enums;
+using nutriclinica_backend.Core.Enums;
 
 namespace nutriclinica_backend.Core.Entities;
 
@@ -15,6 +15,8 @@ public class Paciente
     public string? TituloObjetivo { get; set; }
     public decimal? PesoObjetivo { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>Se registro solo al reservar en linea: el equipo debe revisar sus datos.</summary>
+    public bool DatosPorCompletar { get; set; }
     public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
 
     public virtual HistorialClinico? HistorialClinico { get; set; }

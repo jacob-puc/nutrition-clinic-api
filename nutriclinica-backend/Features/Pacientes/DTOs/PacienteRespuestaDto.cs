@@ -1,4 +1,4 @@
-﻿using nutriclinica_backend.Core.Enums;
+using nutriclinica_backend.Core.Enums;
 
 namespace nutriclinica_backend.Features.Pacientes.DTOs;
 
@@ -19,4 +19,7 @@ public class PacienteRespuestaDto
     public decimal? PesoObjetivo { get; set; }
 
     public DateTime FechaRegistro { get; set; }
+
+    /// <summary>Registrado al reservar en linea; se limpia al editarlo el equipo.</summary>
+    public bool DatosPorCompletar { get; set; }
 }

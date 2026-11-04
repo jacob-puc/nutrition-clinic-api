@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
 using nutriclinica_backend.Core.Enums;
 
@@ -131,6 +131,8 @@ public class ApplicationDbContext : DbContext
                 .WithMany(n => n.Citas)
                 .HasForeignKey(c => c.NutricionistaId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(c => c.Canal).HasConversion<string>().HasMaxLength(20);
 
             entity.Property(c => c.Estado).HasConversion<string>();
             entity.Property(c => c.Motivo).HasMaxLength(500);

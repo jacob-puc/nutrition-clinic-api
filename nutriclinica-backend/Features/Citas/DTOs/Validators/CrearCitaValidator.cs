@@ -20,6 +20,9 @@ public class CrearCitaValidator : AbstractValidator<CrearCitaDto>
             .GreaterThan(DateTime.UtcNow.AddMinutes(-5))
             .WithMessage("La fecha de inicio no puede estar en el pasado.");
 
+        RuleFor(x => x.Canal)
+            .IsInEnum().When(x => x.Canal.HasValue).WithMessage("El canal no es válido.");
+
         RuleFor(x => x.Motivo)
             .MaximumLength(500).WithMessage("El motivo no puede tener más de 500 caracteres");
     }
