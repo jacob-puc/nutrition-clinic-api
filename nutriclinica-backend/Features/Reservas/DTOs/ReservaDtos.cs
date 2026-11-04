@@ -1,4 +1,5 @@
 using nutriclinica_backend.Core.Enums;
+using nutriclinica_backend.Features.Agenda.DTOs;
 
 namespace nutriclinica_backend.Features.Reservas.DTOs;
 
@@ -24,6 +25,8 @@ public class OpcionesReservaDto
 {
     public ClinicaPublicaDto Clinica { get; set; } = new();
     public List<ProfesionalPublicoDto> Profesionales { get; set; } = [];
+    /// <summary>Horario general de la clinica, para la pagina de inicio.</summary>
+    public List<BloqueHorarioDto> HorarioClinica { get; set; } = [];
     /// <summary>Horas minimas entre la reservacion y la cita.</summary>
     public int AnticipacionHoras { get; set; }
     /// <summary>Hasta cuantos dias adelante se puede reservar.</summary>

@@ -70,6 +70,7 @@ public class ReservaService : IReservaService
         {
             Clinica = await ClinicaAsync(),
             Profesionales = profesionales,
+            HorarioClinica = (await _agenda.ObtenerHorariosAsync()).Clinica,
             AnticipacionHoras = AnticipacionHoras,
             DiasMaximos = DiasMaximos
         };
