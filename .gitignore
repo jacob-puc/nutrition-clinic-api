@@ -38,3 +38,9 @@ secrets.json
 .ionide/
 Thumbs.db
 .DS_Store
+# -------------------------------------------------------------
+# Notas de tareas y avance (solo locales)
+# -------------------------------------------------------------
+TASK.md
+PROGRESS.md
+tasks-user.md
