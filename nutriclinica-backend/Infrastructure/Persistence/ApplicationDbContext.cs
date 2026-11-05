@@ -21,6 +21,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<HorarioAtencion> HorariosAtencion => Set<HorarioAtencion>();
     public DbSet<Ausencia> Ausencias => Set<Ausencia>();
     public DbSet<Alimento> Alimentos => Set<Alimento>();
+    public DbSet<MedidaCasera> MedidasCaseras => Set<MedidaCasera>();
     public DbSet<Plato> Platos => Set<Plato>();
     public DbSet<DetallePlato> DetallesPlato => Set<DetallePlato>();
     public DbSet<PlantillaMenu> PlantillasMenu => Set<PlantillaMenu>();
@@ -263,8 +264,25 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.Property(d => d.RacionGramos).HasPrecision(7, 2);
+            entity.Property(d => d.MedidaCantidad).HasPrecision(7, 2);
+            entity.Property(d => d.MedidaNombre).HasMaxLength(40);
 
             entity.HasIndex(d => new { d.PlatoId, d.AlimentoId }).IsUnique();
+        });
+
+        modelBuilder.Entity<MedidaCasera>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+
+            entity.Property(m => m.Nombre).HasMaxLength(40).IsRequired();
+            entity.Property(m => m.Gramos).HasPrecision(7, 2);
+
+            entity.HasOne(m => m.Alimento)
+                .WithMany(a => a.Medidas)
+                .HasForeignKey(m => m.AlimentoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(m => new { m.AlimentoId, m.Nombre }).IsUnique();
         });
 
         modelBuilder.Entity<PlantillaMenu>(entity =>

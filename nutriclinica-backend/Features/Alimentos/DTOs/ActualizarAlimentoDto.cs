@@ -8,4 +8,7 @@ public class ActualizarAlimentoDto
     public decimal Carbohidratos { get; set; }
     public decimal Grasas { get; set; }
     public string? ImagenUrl { get; set; }
+
+    /// <summary>Lista completa de medidas; null deja las que ya tenga.</summary>
+    public List<MedidaCaseraDto>? Medidas { get; set; }
 }

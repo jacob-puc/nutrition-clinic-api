@@ -12,6 +12,8 @@ public class AlimentoRespuestaDto
 
     public string? ImagenUrl { get; set; }
 
+    public List<MedidaCaseraDto> Medidas { get; set; } = [];
+
     public DateTime FechaCreacion { get; set; }
     public bool IsActive { get; set; }
 

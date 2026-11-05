@@ -71,6 +71,7 @@ public class AlimentoService : IAlimentoService
             FechaCreacion = DateTime.UtcNow,
             IsActive = true
         };
+        alimento.Medidas = CrearMedidas(alimento.Id, dto.Medidas);
 
         _context.Alimentos.Add(alimento);
         await _context.SaveChangesAsync();
@@ -85,6 +86,7 @@ public class AlimentoService : IAlimentoService
         await _actualizarAlimentoValidator.ValidateAndThrowAsync(dto);
 
         var alimento = await _context.Alimentos
+            .Include(a => a.Medidas)
             .FirstOrDefaultAsync(a => a.Id == alimentoId)
             ?? throw new KeyNotFoundException($"No se encontró un alimento con ID: {alimentoId}");
 
@@ -100,6 +102,15 @@ public class AlimentoService : IAlimentoService
         alimento.Grasas = dto.Grasas;
         alimento.ImagenUrl = string.IsNullOrWhiteSpace(dto.ImagenUrl) ? null : dto.ImagenUrl.Trim();
 
+        if (dto.Medidas is not null)
+        {
+            /* Se sustituye la lista: los platos guardan su propia copia. Primero
+               se borran las anteriores por el indice unico (alimento, nombre). */
+            _context.MedidasCaseras.RemoveRange(alimento.Medidas);
+            await _context.SaveChangesAsync();
+            _context.MedidasCaseras.AddRange(CrearMedidas(alimento.Id, dto.Medidas));
+        }
+
         await _context.SaveChangesAsync();
 
         return MapToDto(alimento);
@@ -109,6 +120,7 @@ public class AlimentoService : IAlimentoService
     {
         var alimento = await _context.Alimentos
             .AsNoTracking()
+            .Include(a => a.Medidas)
             .FirstOrDefaultAsync(a => a.Id == alimentoId)
             ?? throw new KeyNotFoundException($"No se encontró un alimento con ID: {alimentoId}");
 
@@ -119,7 +131,7 @@ public class AlimentoService : IAlimentoService
     {
         await _filtroValidator.ValidateAndThrowAsync(filtro);
 
-        var query = _context.Alimentos.AsNoTracking().AsQueryable();
+        var query = _context.Alimentos.AsNoTracking().Include(a => a.Medidas).AsSplitQuery().AsQueryable();
 
         if (filtro.SoloActivos ?? true)
         {
@@ -152,6 +164,7 @@ public class AlimentoService : IAlimentoService
     public async Task<AlimentoRespuestaDto> RestaurarAlimentoAsync(Guid alimentoId)
     {
         var alimento = await _context.Alimentos
+            .Include(a => a.Medidas)
             .FirstOrDefaultAsync(a => a.Id == alimentoId)
             ?? throw new KeyNotFoundException($"No se encontró un alimento con ID: {alimentoId}");
 
@@ -173,6 +186,7 @@ public class AlimentoService : IAlimentoService
         ValidarImagen(imagen);
 
         var alimento = await _context.Alimentos
+            .Include(a => a.Medidas)
             .FirstOrDefaultAsync(a => a.Id == alimentoId)
             ?? throw new KeyNotFoundException($"No se encontró un alimento con ID: {alimentoId}");
 
@@ -215,6 +229,18 @@ public class AlimentoService : IAlimentoService
         alimento.IsActive = false;
         await _context.SaveChangesAsync();
     }
+
+    private static List<MedidaCasera> CrearMedidas(Guid alimentoId, List<MedidaCaseraDto>? medidas) =>
+        (medidas ?? [])
+            .Select((m, orden) => new MedidaCasera
+            {
+                Id = Guid.NewGuid(),
+                AlimentoId = alimentoId,
+                Nombre = m.Nombre.Trim().ToLowerInvariant(),
+                Gramos = m.Gramos,
+                Orden = orden
+            })
+            .ToList();
 
     private static void ValidarImagen(IFormFile imagen)
     {
@@ -318,6 +344,10 @@ public class AlimentoService : IAlimentoService
         {
             Id = alimento.Id,
             Nombre = alimento.Nombre,
+            Medidas = alimento.Medidas
+                .OrderBy(m => m.Orden)
+                .Select(m => new MedidaCaseraDto { Id = m.Id, Nombre = m.Nombre, Gramos = m.Gramos })
+                .ToList(),
             Calorias = alimento.Calorias,
             Proteinas = alimento.Proteinas,
             Carbohidratos = alimento.Carbohidratos,

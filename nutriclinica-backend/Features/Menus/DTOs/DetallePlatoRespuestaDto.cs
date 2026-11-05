@@ -6,6 +6,11 @@ public class DetallePlatoRespuestaDto
     public Guid AlimentoId { get; set; }
     public string AlimentoNombre { get; set; } = string.Empty;
     public decimal RacionGramos { get; set; }
+    public decimal? MedidaCantidad { get; set; }
+    public string? MedidaNombre { get; set; }
+
+    /// <summary>"2 piezas"; null si se capturo en gramos.</summary>
+    public string? MedidaTexto { get; set; }
     public int Orden { get; set; }
 
     public decimal Calorias { get; set; }

@@ -370,6 +370,14 @@ namespace nutriclinica_backend.Migrations
                     b.Property<Guid>("AlimentoId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("MedidaCantidad")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
+
+                    b.Property<string>("MedidaNombre")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<int>("Orden")
                         .HasColumnType("integer");
 
@@ -674,6 +682,35 @@ namespace nutriclinica_backend.Migrations
                     b.HasIndex("PacienteId");
 
                     b.ToTable("MedidasAntropometricas");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.MedidaCasera", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AlimentoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Gramos")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlimentoId", "Nombre")
+                        .IsUnique();
+
+                    b.ToTable("MedidasCaseras");
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.MenuAsignado", b =>
@@ -1203,6 +1240,17 @@ namespace nutriclinica_backend.Migrations
                     b.Navigation("Paciente");
                 });
 
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.MedidaCasera", b =>
+                {
+                    b.HasOne("nutriclinica_backend.Core.Entities.Alimento", "Alimento")
+                        .WithMany("Medidas")
+                        .HasForeignKey("AlimentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Alimento");
+                });
+
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.MenuAsignado", b =>
                 {
                     b.HasOne("nutriclinica_backend.Core.Entities.Paciente", "Paciente")
@@ -1258,6 +1306,11 @@ namespace nutriclinica_backend.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Nutricionista");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.Alimento", b =>
+                {
+                    b.Navigation("Medidas");
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.Cita", b =>

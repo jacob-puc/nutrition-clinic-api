@@ -16,6 +16,7 @@ public static class Seeder
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         await SeedDatosFiscalesAsync(context, logger);
+        await MedidasCaserasSeeder.SeedAsync(context, logger);
 
         var correo = configuration["Seed:AdminCorreo"];
         var contrasena = configuration["Seed:AdminContrasena"];

@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
 using nutriclinica_backend.Core.Exceptions;
+using nutriclinica_backend.Core.Utils;
 using nutriclinica_backend.Features.Menus.DTOs;
 using nutriclinica_backend.Features.Menus.Interfaces;
 using nutriclinica_backend.Infrastructure.Persistence;
@@ -55,6 +56,8 @@ public class PlatoService : IPlatoService
                 PlatoId = plato.Id,
                 AlimentoId = d.AlimentoId,
                 RacionGramos = d.RacionGramos,
+                MedidaCantidad = CantidadDe(d),
+                MedidaNombre = NombreDe(d),
                 Orden = d.Orden
             })
             .ToList();
@@ -97,6 +100,8 @@ public class PlatoService : IPlatoService
             {
                 existente.AlimentoId = detalleDto.AlimentoId;
                 existente.RacionGramos = detalleDto.RacionGramos;
+                existente.MedidaCantidad = CantidadDe(detalleDto);
+                existente.MedidaNombre = NombreDe(detalleDto);
                 existente.Orden = orden++;
                 conservados.Add(existente);
             }
@@ -108,6 +113,8 @@ public class PlatoService : IPlatoService
                     PlatoId = plato.Id,
                     AlimentoId = detalleDto.AlimentoId,
                     RacionGramos = detalleDto.RacionGramos,
+                    MedidaCantidad = CantidadDe(detalleDto),
+                    MedidaNombre = NombreDe(detalleDto),
                     Orden = orden++
                 });
             }
@@ -210,6 +217,8 @@ public class PlatoService : IPlatoService
                 PlatoId = copia.Id,
                 AlimentoId = d.AlimentoId,
                 RacionGramos = d.RacionGramos,
+                MedidaCantidad = d.MedidaCantidad,
+                MedidaNombre = d.MedidaNombre,
                 Orden = d.Orden
             })
             .ToList();
@@ -269,6 +278,13 @@ public class PlatoService : IPlatoService
         plato.IsActive = false;
         await _context.SaveChangesAsync();
     }
+
+    /* Sin nombre no hay medida: la fila queda capturada en gramos. */
+    private static string? NombreDe(CrearDetallePlatoDto dto) =>
+        string.IsNullOrWhiteSpace(dto.MedidaNombre) ? null : dto.MedidaNombre.Trim();
+
+    private static decimal? CantidadDe(CrearDetallePlatoDto dto) =>
+        NombreDe(dto) is null ? null : dto.MedidaCantidad;
 
     private async Task ValidarNutricionistaAsync(Guid? nutricionistaId)
     {
@@ -371,6 +387,9 @@ public class PlatoService : IPlatoService
                     AlimentoId = d.AlimentoId,
                     AlimentoNombre = alimento.Nombre,
                     RacionGramos = d.RacionGramos,
+                    MedidaCantidad = d.MedidaCantidad,
+                    MedidaNombre = d.MedidaNombre,
+                    MedidaTexto = TextoMedida.Formatear(d.MedidaCantidad, d.MedidaNombre),
                     Orden = d.Orden,
                     Calorias = decimal.Round(alimento.Calorias * factor, 2),
                     Proteinas = decimal.Round(alimento.Proteinas * factor, 2),

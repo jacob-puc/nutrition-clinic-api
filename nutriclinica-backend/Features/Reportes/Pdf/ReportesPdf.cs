@@ -66,7 +66,7 @@ public static class ReportesPdf
     /// </summary>
     public static byte[] MenuPaciente(
         MenuAsignadoRespuestaDto menu,
-        IReadOnlyDictionary<Guid, IReadOnlyList<(string Alimento, decimal Gramos)>> ingredientesPorPlato,
+        IReadOnlyDictionary<Guid, IReadOnlyList<(string Alimento, decimal Gramos, decimal? MedidaCantidad, string? MedidaNombre)>> ingredientesPorPlato,
         DatosFiscalesClinica? clinica)
     {
         var diasConPlatos = Dias.Where(d => menu.Detalles.Any(x => x.DiaSemana == d)).ToList();
@@ -198,9 +198,14 @@ public static class ReportesPdf
                                             /* Desglose: gramos por porcion × porciones. */
                                             if (ingredientesPorPlato.TryGetValue(p.PlatoId, out var ingredientes))
                                             {
-                                                foreach (var (alimento, gramos) in ingredientes)
+                                                foreach (var (alimento, gramos, medidaCantidad, medidaNombre) in ingredientes)
                                                 {
-                                                    plato.Item().Text($"· {alimento} {Num(gramos * p.Cantidad)} g")
+                                                    /* En medida casera si asi se capturo: el paciente no pesa su comida. */
+                                                    var medida = TextoMedida.Escalada(medidaCantidad, medidaNombre, p.Cantidad);
+                                                    var racion = medida is null
+                                                        ? $"{Num(gramos * p.Cantidad)} g"
+                                                        : $"{medida} ({Num(gramos * p.Cantidad)} g)";
+                                                    plato.Item().Text($"· {alimento} {racion}")
                                                         .FontSize(7).FontColor(Colors.Grey.Darken2);
                                                 }
                                             }

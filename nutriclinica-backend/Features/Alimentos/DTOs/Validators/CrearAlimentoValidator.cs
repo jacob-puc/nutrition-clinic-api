@@ -9,6 +9,15 @@ public class CrearAlimentoValidator : AbstractValidator<CrearAlimentoDto>
 
     public CrearAlimentoValidator()
     {
+        RuleFor(x => x.Medidas)
+            .Must(m => m!.Count <= MedidaCaseraValidator.MaximoPorAlimento)
+            .WithMessage($"Un alimento puede tener hasta {MedidaCaseraValidator.MaximoPorAlimento} medidas.")
+            .Must(m => MedidaCaseraValidator.NombresUnicos(m!))
+            .WithMessage("Hay dos medidas con el mismo nombre.")
+            .When(x => x.Medidas is not null);
+
+        RuleForEach(x => x.Medidas).SetValidator(new MedidaCaseraValidator());
+
         RuleFor(x => x.Nombre)
             .NotEmpty().WithMessage("El nombre del alimento es obligatorio.")
             .MaximumLength(150).WithMessage("El nombre no puede superar 150 caracteres.");

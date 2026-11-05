@@ -52,13 +52,15 @@ public class ReporteService : IReporteService
             .AsNoTracking()
             .Where(d => platoIds.Contains(d.PlatoId))
             .OrderBy(d => d.Orden)
-            .Select(d => new { d.PlatoId, Alimento = d.Alimento.Nombre, d.RacionGramos })
+            .Select(d => new { d.PlatoId, Alimento = d.Alimento.Nombre, d.RacionGramos, d.MedidaCantidad, d.MedidaNombre })
             .ToListAsync();
         var porPlato = ingredientes
             .GroupBy(i => i.PlatoId)
             .ToDictionary(
                 g => g.Key,
-                g => (IReadOnlyList<(string Alimento, decimal Gramos)>)g.Select(i => (i.Alimento, i.RacionGramos)).ToList());
+                g => (IReadOnlyList<(string Alimento, decimal Gramos, decimal? MedidaCantidad, string? MedidaNombre)>)g
+                    .Select(i => (i.Alimento, i.RacionGramos, i.MedidaCantidad, i.MedidaNombre))
+                    .ToList());
 
         var pdf = ReportesPdf.MenuPaciente(menu, porPlato, clinica);
         return (pdf, $"menu-{Slug(menu.PacienteNombre)}.pdf");

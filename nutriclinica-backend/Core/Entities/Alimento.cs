@@ -15,4 +15,6 @@ public class Alimento
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
+
+    public virtual ICollection<MedidaCasera> Medidas { get; set; } = new List<MedidaCasera>();
 }
