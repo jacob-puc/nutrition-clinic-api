@@ -1,6 +1,7 @@
 using nutriclinica_backend.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using nutriclinica_backend.Features.Reportes.DTOs;
 using nutriclinica_backend.Features.Reportes.Services;
 
 namespace nutriclinica_backend.Controllers;
@@ -15,10 +16,19 @@ namespace nutriclinica_backend.Controllers;
 public class ReportesController : ControllerBase
 {
     private readonly IReporteService _reportes;
+    private readonly IReporteIngresosService _ingresos;
 
-    public ReportesController(IReporteService reportes)
+    public ReportesController(IReporteService reportes, IReporteIngresosService ingresos)
     {
         _reportes = reportes;
+        _ingresos = ingresos;
+    }
+
+    [Authorize(Roles = Roles.Administrador)]
+    [HttpGet("api/reportes/ingresos")]
+    public async Task<ActionResult<ReporteIngresosDto>> Ingresos([FromQuery] ReporteIngresosFiltroDto filtro)
+    {
+        return Ok(await _ingresos.ObtenerAsync(filtro));
     }
 
     [HttpGet("api/menu-asignados/{menuId:guid}/pdf")]
