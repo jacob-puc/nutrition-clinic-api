@@ -300,10 +300,13 @@ public class CitaService : ICitaService
         {
             throw new ConflictException("El nutricionista no está disponible en el horario seleccionado.");
         }
+        /* Una cita completada ya no ocupa al nutricionista, que puede atender a
+           otro si termino antes, pero el paciente ya tuvo su cita en ese horario. */
+        var estadosBloqueantesPaciente = estadosBloqueantes.Append(EstadoCita.Completada).ToArray();
         var existeCitaPaciente = await _context.Citas
             .AsNoTracking()
             .AnyAsync(c => c.PacienteId == pacienteId
-                           && estadosBloqueantes.Contains(c.Estado)
+                           && estadosBloqueantesPaciente.Contains(c.Estado)
                            && (!citaExcluidaId.HasValue || c.Id != citaExcluidaId.Value)
                            && c.FechaInicio < fechaFin
                            && fechaInicio < c.FechaFin);
