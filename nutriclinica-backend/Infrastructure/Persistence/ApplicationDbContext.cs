@@ -51,6 +51,7 @@ public class ApplicationDbContext : DbContext
                   .HasForeignKey<HistorialClinico>(h => h.PacienteId)
                   .OnDelete(DeleteBehavior.Cascade);
 
+            entity.Property(h => h.Enfermedades).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
             entity.Property(h => h.Alergias).HasColumnType("jsonb");
             entity.Property(h => h.AlimentosFavoritos).HasColumnType("jsonb");
             entity.Property(h => h.AlimentosNoFavoritos).HasColumnType("jsonb");

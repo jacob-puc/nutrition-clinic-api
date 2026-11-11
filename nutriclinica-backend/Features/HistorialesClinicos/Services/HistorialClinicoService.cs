@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
 using nutriclinica_backend.Features.HistorialesClinicos.DTOs;
@@ -27,14 +27,7 @@ public class HistorialClinicoService : IHistorialClinicoService
             .FirstOrDefaultAsync(h => h.PacienteId == pacienteId)
             ?? throw new KeyNotFoundException("El paciente no tiene historial clínico registrado");
 
-        return new HistorialClinicoRespuestaDto
-        {
-            Id = historial.Id,
-            PacienteId = historial.PacienteId,
-            Alergias = historial.Alergias,
-            AlimentosFavoritos = historial.AlimentosFavoritos,
-            AlimentosNoFavoritos = historial.AlimentosNoFavoritos
-        };
+        return MapToDto(historial);
     }
 
     public async Task<HistorialClinicoRespuestaDto> UpsertHistorialClinicoAsync(Guid pacienteId, CrearHistorialClinicoDto dto)
@@ -46,7 +39,7 @@ public class HistorialClinicoService : IHistorialClinicoService
 
         if (!pacienteExiste)
         {
-            throw new KeyNotFoundException($"No se encontró un paciente activo con el ID proporcionado: {pacienteId}");
+            throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
         }
 
         var historial = await _context.HistorialesClinicos
@@ -54,31 +47,35 @@ public class HistorialClinicoService : IHistorialClinicoService
 
         if (historial == null)
         {
-            historial = new HistorialClinico
-            {
-                PacienteId = pacienteId,
-                Alergias = dto.Alergias,
-                AlimentosFavoritos = dto.AlimentosFavoritos,
-                AlimentosNoFavoritos = dto.AlimentosNoFavoritos
-            };
+            historial = new HistorialClinico { PacienteId = pacienteId };
             _context.HistorialesClinicos.Add(historial);
         }
-        else
-        {
-            historial.Alergias = dto.Alergias;
-            historial.AlimentosFavoritos = dto.AlimentosFavoritos;
-            historial.AlimentosNoFavoritos = dto.AlimentosNoFavoritos;
-        }
+
+        historial.Enfermedades = Limpiar(dto.Enfermedades);
+        historial.Alergias = Limpiar(dto.Alergias);
+        historial.AlimentosFavoritos = Limpiar(dto.AlimentosFavoritos);
+        historial.AlimentosNoFavoritos = Limpiar(dto.AlimentosNoFavoritos);
 
         await _context.SaveChangesAsync();
 
-        return new HistorialClinicoRespuestaDto
-        {
-            Id = historial.Id,
-            PacienteId = historial.PacienteId,
-            Alergias = historial.Alergias,
-            AlimentosFavoritos = historial.AlimentosFavoritos,
-            AlimentosNoFavoritos = historial.AlimentosNoFavoritos
-        };
+        return MapToDto(historial);
     }
+
+    /// <summary>Sin espacios sobrantes ni repetidos ("Nueces" y "nueces " son lo mismo).</summary>
+    private static List<string> Limpiar(IEnumerable<string> valores) =>
+        valores
+            .Select(v => v.Trim())
+            .Where(v => v.Length > 0)
+            .DistinctBy(v => v.ToLowerInvariant())
+            .ToList();
+
+    private static HistorialClinicoRespuestaDto MapToDto(HistorialClinico historial) => new()
+    {
+        Id = historial.Id,
+        PacienteId = historial.PacienteId,
+        Enfermedades = historial.Enfermedades,
+        Alergias = historial.Alergias,
+        AlimentosFavoritos = historial.AlimentosFavoritos,
+        AlimentosNoFavoritos = historial.AlimentosNoFavoritos
+    };
 }

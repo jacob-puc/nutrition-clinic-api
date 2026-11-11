@@ -57,7 +57,7 @@ public class PacienteService : IPacienteService
 
         var paciente = await _context.Pacientes
             .FirstOrDefaultAsync(p => p.Id == id && p.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {id}");
+            ?? throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
 
         paciente.NombreCompleto = dto.NombreCompleto;
         paciente.CorreoElectronico = dto.CorreoElectronico;
@@ -81,7 +81,7 @@ public class PacienteService : IPacienteService
 
         var paciente = await _context.Pacientes
             .FirstOrDefaultAsync(p => p.Id == id && p.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {id}");
+            ?? throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
 
         paciente.TituloObjetivo = dto.TituloObjetivo?.Trim();
         paciente.PesoObjetivo = dto.PesoObjetivo;
@@ -95,7 +95,7 @@ public class PacienteService : IPacienteService
     {
         var paciente = await _context.Pacientes
             .FirstOrDefaultAsync(p => p.Id == id && p.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {id}");
+            ?? throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
 
         paciente.IsActive = false;
         await _context.SaveChangesAsync();
@@ -106,7 +106,7 @@ public class PacienteService : IPacienteService
         var paciente = await _context.Pacientes
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == id && p.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {id}");
+            ?? throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
 
         return MapToDto(paciente);
     }
@@ -127,7 +127,7 @@ public class PacienteService : IPacienteService
             .Include(p => p.HistorialClinico)
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == id && p.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {id}");
+            ?? throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
 
         var medidas = await _context.MedidasAntropometricas
             .AsNoTracking()
@@ -196,6 +196,7 @@ public class PacienteService : IPacienteService
                 {
                     Id = paciente.HistorialClinico.Id,
                     PacienteId = paciente.HistorialClinico.PacienteId,
+                    Enfermedades = paciente.HistorialClinico.Enfermedades,
                     Alergias = paciente.HistorialClinico.Alergias,
                     AlimentosFavoritos = paciente.HistorialClinico.AlimentosFavoritos,
                     AlimentosNoFavoritos = paciente.HistorialClinico.AlimentosNoFavoritos

@@ -250,6 +250,7 @@ public static class ReportesPdf
         PacienteRespuestaDto paciente,
         ExpedienteCompletoDto expediente,
         IReadOnlyList<ConsultaRespuestaDto> consultas,
+        IReadOnlyDictionary<Guid, string?> motivosPorCita,
         MenuAsignadoRespuestaDto? planVigente,
         DatosFiscalesClinica? clinica)
     {
@@ -299,10 +300,11 @@ public static class ReportesPdf
                         }
                     }));
 
-                    /* ---------- Alergias y preferencias ---------- */
+                    /* ---------- Salud, alergias y preferencias ---------- */
                     var historial = expediente.HistorialClinico;
-                    col.Item().Element(c => Seccion(c, "Alergias y preferencias", s =>
+                    col.Item().Element(c => Seccion(c, "Salud, alergias y preferencias", s =>
                     {
+                        Lista(s, "Enfermedades", historial?.Enfermedades, null);
                         Lista(s, "Alergias", historial?.Alergias, Colors.Red.Darken2);
                         Lista(s, "Le gusta", historial?.AlimentosFavoritos, null);
                         Lista(s, "No le gusta", historial?.AlimentosNoFavoritos, null);
@@ -361,47 +363,92 @@ public static class ReportesPdf
                             return;
                         }
 
-                        foreach (var consulta in consultas.OrderByDescending(x => x.FechaInicio))
+                        /* Numeradas en orden de atencion; se listan de la mas reciente a la primera. */
+                        var cronologicas = consultas.OrderBy(x => x.FechaInicio).ToList();
+                        for (var i = cronologicas.Count - 1; i >= 0; i--)
                         {
-                            s.Item().ShowEntire().BorderBottom(1).BorderColor(Linea).PaddingBottom(6).Column(c =>
+                            var consulta = cronologicas[i];
+                            var numero = i + 1;
+                            var medida = medidas.LastOrDefault(m => m.ConsultaId == consulta.Id);
+                            var previa = medida is null
+                                ? null
+                                : medidas.LastOrDefault(m => m.FechaMedicion < medida.FechaMedicion);
+                            string? motivo = null;
+                            if (consulta.CitaId is { } citaId) motivosPorCita.TryGetValue(citaId, out motivo);
+
+                            s.Item().ShowEntire().Border(0.75f).BorderColor(Linea).Padding(8).Column(c =>
                             {
+                                c.Spacing(4);
+                                c.Item().Row(row =>
+                                {
+                                    row.RelativeItem().Text(t =>
+                                    {
+                                        t.Span($"Consulta {numero}").Bold().FontColor(Acento);
+                                        t.Span($"  ·  {consulta.TipoConsulta}").SemiBold();
+                                    });
+                                    row.AutoItem().Text(HorarioConsulta(consulta)).FontColor(Tenue);
+                                });
                                 c.Item().Text(t =>
                                 {
-                                    t.Span(ZonaClinica.Formatear(consulta.FechaInicio, "dd/MM/yyyy")).Bold();
-                                    t.Span($"  ·  {consulta.TipoConsulta}  ·  {consulta.NutricionistaNombre}").FontColor(Tenue);
-                                    if (consulta.FechaFin is null)
-                                    {
-                                        t.Span("  ·  en curso").FontColor(Colors.Orange.Darken2);
-                                    }
+                                    t.Span("Atendió: ").FontColor(Tenue);
+                                    t.Span(consulta.NutricionistaNombre);
+                                    if (consulta.FechaFin is null) t.Span("  ·  en curso").FontColor(Colors.Orange.Darken2);
                                 });
+
+                                if (!string.IsNullOrWhiteSpace(motivo))
+                                {
+                                    c.Item().Text(t =>
+                                    {
+                                        t.Span("Motivo: ").FontColor(Tenue);
+                                        t.Span(motivo);
+                                    });
+                                }
+
+                                if (medida is not null)
+                                {
+                                    c.Item().Text(t =>
+                                    {
+                                        t.Span("Medidas: ").FontColor(Tenue);
+                                        t.Span($"Peso {Num(medida.Peso)} kg").SemiBold();
+                                        if (previa is not null)
+                                        {
+                                            var cambio = medida.Peso - previa.Peso;
+                                            t.Span($" ({(cambio > 0 ? "+" : cambio < 0 ? "−" : "")}{Num(Math.Abs(cambio))} kg)").FontColor(Tenue);
+                                        }
+                                        t.Span($"  ·  IMC {Num(medida.Imc)}");
+                                        if (medida.PorcentajeGrasa is { } grasa) t.Span($"  ·  Grasa {Num(grasa)} %");
+                                        if (medida.PorcentajeMasaMuscular is { } musculo) t.Span($"  ·  Masa muscular {Num(musculo)} %");
+                                        if (medida.MedidaCintura is { } cintura) t.Span($"  ·  Cintura {Num(cintura)} cm");
+                                        if (medida.MedidaCadera is { } cadera) t.Span($"  ·  Cadera {Num(cadera)} cm");
+                                    });
+                                }
+
                                 if (!string.IsNullOrWhiteSpace(consulta.NotasClinicas))
                                 {
-                                    c.Item().PaddingTop(2).Text(consulta.NotasClinicas);
+                                    c.Item().PaddingTop(2).Text("Notas").FontSize(7.5f).FontColor(Tenue);
+                                    c.Item().Text(consulta.NotasClinicas);
                                 }
                             });
                         }
                     }));
 
-                    /* ---------- Archivos ---------- */
-                    if (expediente.Documentos.Count > 0 || expediente.Fotos.Count > 0)
-                    {
-                        col.Item().Element(c => Seccion(c, "Archivos del expediente", s =>
-                        {
-                            s.Item().Text(
-                                    $"{expediente.Fotos.Count} foto(s) de seguimiento y {expediente.Documentos.Count} documento(s) " +
-                                    "disponibles en el expediente digital.")
-                                .FontColor(Tenue);
-                            foreach (var doc in expediente.Documentos)
-                            {
-                                s.Item().Text($"• {doc.NombreDocumento} ({ZonaClinica.Fecha(doc.FechaSubida)})");
-                            }
-                        }));
-                    }
                 });
 
                 page.Footer().Element(c => Pie(c, "Documento confidencial: contiene información clínica del paciente."));
             });
         }).GeneratePdf();
+    }
+
+    /// <summary>"12/10/2026  ·  14:45–15:30 (45 min)"; sin cierre, solo la hora de inicio.</summary>
+    private static string HorarioConsulta(ConsultaRespuestaDto consulta)
+    {
+        var fecha = ZonaClinica.Formatear(consulta.FechaInicio, "dd/MM/yyyy");
+        var inicio = ZonaClinica.Formatear(consulta.FechaInicio, "HH:mm");
+        if (consulta.FechaFin is not { } fin) return $"{fecha}  ·  {inicio}";
+
+        var minutos = (int)Math.Round((fin - consulta.FechaInicio).TotalMinutes);
+        var duracion = minutos < 1 ? "menos de 1 min" : $"{minutos} min";
+        return $"{fecha}  ·  {inicio}–{ZonaClinica.Formatear(fin, "HH:mm")} ({duracion})";
     }
 
     /* ==================== Piezas comunes ==================== */

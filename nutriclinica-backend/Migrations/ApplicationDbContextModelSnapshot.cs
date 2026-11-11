@@ -591,6 +591,12 @@ namespace nutriclinica_backend.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.PrimitiveCollection<string>("Enfermedades")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValueSql("'[]'::jsonb");
+
                     b.Property<Guid>("PacienteId")
                         .HasColumnType("uuid");
 

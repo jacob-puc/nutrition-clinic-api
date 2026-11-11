@@ -81,7 +81,14 @@ public class ReporteService : IReporteService
 
         var clinica = await _context.DatosFiscalesClinica.AsNoTracking().FirstOrDefaultAsync();
 
-        var pdf = ReportesPdf.HistorialClinico(paciente, expediente, consultas, vigente, clinica);
+        /* El motivo vive en la cita que origino cada consulta. */
+        var citaIds = consultas.Where(c => c.CitaId.HasValue).Select(c => c.CitaId!.Value).ToList();
+        var motivos = await _context.Citas
+            .AsNoTracking()
+            .Where(c => citaIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => c.Motivo);
+
+        var pdf = ReportesPdf.HistorialClinico(paciente, expediente, consultas, motivos, vigente, clinica);
         return (pdf, $"historial-clinico-{Slug(paciente.NombreCompleto)}.pdf");
     }
 
