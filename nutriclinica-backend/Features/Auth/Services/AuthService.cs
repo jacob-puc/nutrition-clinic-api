@@ -69,7 +69,7 @@ public class AuthService : IAuthService
 
         if (nutricionista is null)
         {
-            throw new UnauthorizedAccessException("El refresh token no es válido.");
+            throw new UnauthorizedAccessException("Tu sesión ya no es válida. Inicia sesión de nuevo.");
         }
 
         if (nutricionista.RefreshTokenExpiresAt is null
@@ -77,7 +77,7 @@ public class AuthService : IAuthService
         {
             LimpiarRefreshToken(nutricionista);
             await _context.SaveChangesAsync();
-            throw new UnauthorizedAccessException("El refresh token expiró. Inicia sesión nuevamente.");
+            throw new UnauthorizedAccessException("Tu sesión terminó. Inicia sesión de nuevo.");
         }
 
         if (!nutricionista.IsActive)

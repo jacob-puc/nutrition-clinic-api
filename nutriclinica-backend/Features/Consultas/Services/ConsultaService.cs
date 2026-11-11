@@ -1,3 +1,4 @@
+using nutriclinica_backend.Core.Utils;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.DTOs;
@@ -39,24 +40,24 @@ public class ConsultaService : IConsultaService
             cita = await _context.Citas
                 .Include(c => c.Consulta)
                 .FirstOrDefaultAsync(c => c.Id == dto.CitaId.Value)
-                ?? throw new KeyNotFoundException($"No se encontró la cita con ID: {dto.CitaId}");
+                ?? throw new KeyNotFoundException("No encontramos esa cita. Puede que se haya eliminado.");
 
             if (cita.PacienteId != dto.PacienteId)
             {
                 throw new ValidationException(
-                    $"La cita {cita.Id} pertenece a otro paciente. No se puede registrar la consulta sobre ella.");
+                    "Esta cita es de otro paciente.");
             }
 
             if (cita.Consulta != null)
             {
                 throw new ConflictException(
-                    $"La cita {cita.Id} ya tiene la consulta {cita.Consulta.Id} registrada.");
+                    "Esta cita ya tiene una consulta registrada.");
             }
 
             if (!CitaService.EstadosAtendibles.Contains(cita.Estado))
             {
                 throw new ValidationException(
-                    $"No se puede registrar una consulta sobre una cita en estado {cita.Estado}. " +
+                    $"No se puede iniciar la consulta de una cita en estado «{TextoEstado.Cita(cita.Estado)}». " +
                     "Solo se admiten citas Confirmada o EnCurso.");
             }
 
@@ -71,12 +72,12 @@ public class ConsultaService : IConsultaService
         var paciente = await _context.Pacientes
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == dto.PacienteId && p.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {dto.PacienteId}");
+            ?? throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
 
         var nutricionista = await _context.Nutricionistas
             .AsNoTracking()
             .FirstOrDefaultAsync(n => n.Id == nutricionistaId && n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un nutricionista activo con ID: {nutricionistaId}");
+            ?? throw new KeyNotFoundException("No encontramos a ese nutriólogo. Puede que se haya eliminado.");
 
         var consulta = new Consulta
         {
@@ -110,11 +111,11 @@ public class ConsultaService : IConsultaService
         var consulta = await _context.Consultas
             .Include(c => c.Cita)
             .FirstOrDefaultAsync(c => c.Id == consultaId)
-            ?? throw new KeyNotFoundException($"No se encontró la consulta con ID: {consultaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa consulta. Puede que se haya eliminado.");
 
         if (consulta.FechaFin.HasValue)
         {
-            throw new ConflictException($"La consulta {consultaId} ya fue cerrada el {consulta.FechaFin:yyyy-MM-dd}.");
+            throw new ConflictException($"Esta consulta ya se cerró el {ZonaClinica.Fecha(consulta.FechaFin!.Value)}.");
         }
 
         var fechaFin = dto.FechaFin ?? DateTime.UtcNow;
@@ -161,7 +162,7 @@ public class ConsultaService : IConsultaService
             .Include(c => c.Nutricionista)
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == consultaId)
-            ?? throw new KeyNotFoundException($"No se encontró la consulta con ID: {consultaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa consulta. Puede que se haya eliminado.");
 
         return MapToDto(consulta, consulta.Paciente.NombreCompleto, consulta.Nutricionista.NombreCompleto);
     }
@@ -252,7 +253,7 @@ public class ConsultaService : IConsultaService
 
         if (!pacienteExiste)
         {
-            throw new KeyNotFoundException($"No se encontró un paciente con ID: {pacienteId}");
+            throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
         }
 
         return await ListarConsultasAsync(

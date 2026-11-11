@@ -52,8 +52,10 @@ public class GlobalExceptionMiddleware
         }
         catch (StorageNoConfiguradoException ex)
         {
+            _logger.LogWarning(ex, "Subida de archivos sin configurar");
             await EscribirErrorAsync(
-                context, StatusCodes.Status503ServiceUnavailable, "STORAGE_NO_CONFIGURADO", ex.Message);
+                context, StatusCodes.Status503ServiceUnavailable, "STORAGE_NO_CONFIGURADO",
+                "Por ahora no se pueden subir archivos. Avisa al administrador de la clínica.");
         }
         catch (Exception ex)
         {

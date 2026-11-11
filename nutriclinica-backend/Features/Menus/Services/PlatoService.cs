@@ -77,7 +77,7 @@ public class PlatoService : IPlatoService
         var plato = await _context.Platos
             .Include(p => p.Detalles)
             .FirstOrDefaultAsync(p => p.Id == platoId)
-            ?? throw new KeyNotFoundException($"No se encontró un plato con ID: {platoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese plato. Puede que se haya eliminado.");
 
         await ValidarNutricionistaAsync(plato.NutricionistaId);
         var alimentos = await CargarAlimentosAsync(dto.Detalles.Select(d => d.AlimentoId));
@@ -136,7 +136,7 @@ public class PlatoService : IPlatoService
             .AsNoTracking()
             .Include(p => p.Detalles)
             .FirstOrDefaultAsync(p => p.Id == platoId)
-            ?? throw new KeyNotFoundException($"No se encontró un plato con ID: {platoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese plato. Puede que se haya eliminado.");
 
         var detalles = plato.Detalles.OrderBy(d => d.Orden).ToList();
         var alimentos = await CargarAlimentosAsync(detalles.Select(d => d.AlimentoId), soloActivos: false);
@@ -196,7 +196,7 @@ public class PlatoService : IPlatoService
             .AsNoTracking()
             .Include(p => p.Detalles)
             .FirstOrDefaultAsync(p => p.Id == platoId)
-            ?? throw new KeyNotFoundException($"No se encontró un plato con ID: {platoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese plato. Puede que se haya eliminado.");
 
         var copia = new Plato
         {
@@ -233,7 +233,7 @@ public class PlatoService : IPlatoService
     {
         var plato = await _context.Platos
             .FirstOrDefaultAsync(p => p.Id == platoId)
-            ?? throw new KeyNotFoundException($"No se encontró un plato con ID: {platoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese plato. Puede que se haya eliminado.");
 
         if (plato.IsActive)
         {
@@ -248,7 +248,7 @@ public class PlatoService : IPlatoService
     {
         var plato = await _context.Platos
             .FirstOrDefaultAsync(p => p.Id == platoId)
-            ?? throw new KeyNotFoundException($"No se encontró un plato con ID: {platoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese plato. Puede que se haya eliminado.");
 
         if (!plato.IsActive)
         {
@@ -299,7 +299,7 @@ public class PlatoService : IPlatoService
         if (!existe)
         {
             throw new KeyNotFoundException(
-                $"No se encontró un nutricionista activo con ID: {nutricionistaId}");
+                "No encontramos a ese nutriólogo. Puede que se haya eliminado.");
         }
     }
 

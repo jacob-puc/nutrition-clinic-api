@@ -38,7 +38,7 @@ public class PagoService : IPagoService
         var consulta = await _context.Consultas
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == dto.ConsultaId)
-            ?? throw new KeyNotFoundException($"No se encontró la consulta con ID: {dto.ConsultaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa consulta. Puede que se haya eliminado.");
 
         if (consulta.FechaFin is null)
         {
@@ -157,7 +157,7 @@ public class PagoService : IPagoService
                 PacienteNombre = paciente.NombreCompleto
             })
             .FirstOrDefaultAsync()
-            ?? throw new KeyNotFoundException($"No se encontró el pago con ID: {pagoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese pago. Puede que se haya eliminado.");
 
         return MapToDto(proyeccion.Pago, proyeccion.PacienteNombre);
     }
@@ -166,7 +166,7 @@ public class PagoService : IPagoService
     {
         var pago = await _context.Pagos
             .FirstOrDefaultAsync(p => p.Id == pagoId)
-            ?? throw new KeyNotFoundException($"No se encontró el pago con ID: {pagoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese pago. Puede que se haya eliminado.");
 
         if (pago.Estado == EstadoPago.Anulado)
         {
@@ -205,7 +205,7 @@ public class PagoService : IPagoService
             .Include(p => p.Paciente)
             .Include(p => p.Consulta)
             .FirstOrDefaultAsync(p => p.Id == pagoId)
-            ?? throw new KeyNotFoundException($"No se encontró el pago con ID: {pagoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese pago. Puede que se haya eliminado.");
 
         var clinica = await _context.DatosFiscalesClinica
             .AsNoTracking()

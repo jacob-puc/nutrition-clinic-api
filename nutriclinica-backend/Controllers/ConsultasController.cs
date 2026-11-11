@@ -53,7 +53,7 @@ public class ConsultasController : ControllerBase
 
         if (consulta == null)
         {
-            return NotFound($"La cita {citaId} no tiene consulta registrada.");
+            return NotFound("Esta cita todavía no tiene una consulta.");
         }
 
         return Ok(consulta);

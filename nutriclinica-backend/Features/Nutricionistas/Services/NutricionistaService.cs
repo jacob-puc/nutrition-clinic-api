@@ -83,7 +83,7 @@ public class NutricionistaService : INutricionistaService
 
         var nutricionista = await _context.Nutricionistas
             .FirstOrDefaultAsync(n => n.Id == id && n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró una cuenta activa con ID: {id}");
+            ?? throw new KeyNotFoundException("No encontramos esa cuenta. Puede que se haya eliminado.");
 
         var correo = NormalizarCorreo(dto.CorreoElectronico);
         await ValidarCorreoDisponibleAsync(correo, id);
@@ -123,7 +123,7 @@ public class NutricionistaService : INutricionistaService
 
         var nutricionista = await _context.Nutricionistas
             .FirstOrDefaultAsync(n => n.Id == id && n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró una cuenta activa con ID: {id}");
+            ?? throw new KeyNotFoundException("No encontramos esa cuenta. Puede que se haya eliminado.");
 
         nutricionista.PasswordHash = AuthService.HashPassword(nutricionista, contrasena);
         nutricionista.DebeCambiarContrasena = temporal;
@@ -152,7 +152,7 @@ public class NutricionistaService : INutricionistaService
         var nutricionista = await _context.Nutricionistas
             .AsNoTracking()
             .FirstOrDefaultAsync(n => n.Id == id)
-            ?? throw new KeyNotFoundException($"No se encontró la cuenta con ID: {id}");
+            ?? throw new KeyNotFoundException("No encontramos esa cuenta. Puede que se haya eliminado.");
 
         return MapToDto(nutricionista);
     }
@@ -178,7 +178,7 @@ public class NutricionistaService : INutricionistaService
 
         var nutricionista = await _context.Nutricionistas
             .FirstOrDefaultAsync(n => n.Id == id && n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró una cuenta activa con ID: {id}");
+            ?? throw new KeyNotFoundException("No encontramos esa cuenta. Puede que se haya eliminado.");
 
         var enCurso = await _context.Citas
             .AnyAsync(c => c.NutricionistaId == id && c.Estado == EstadoCita.EnCurso);
@@ -198,7 +198,7 @@ public class NutricionistaService : INutricionistaService
     {
         var nutricionista = await _context.Nutricionistas
             .FirstOrDefaultAsync(n => n.Id == id && !n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró una cuenta inactiva con ID: {id}");
+            ?? throw new KeyNotFoundException("No encontramos esa cuenta. Puede que se haya eliminado.");
 
         await ValidarCorreoDisponibleAsync(nutricionista.CorreoElectronico, id);
 
@@ -240,7 +240,7 @@ public class NutricionistaService : INutricionistaService
         var destino = await _context.Nutricionistas
             .AsNoTracking()
             .FirstOrDefaultAsync(n => n.Id == destinoId && n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró una cuenta activa con ID: {destinoId}");
+            ?? throw new KeyNotFoundException("No encontramos esa cuenta. Puede que se haya eliminado.");
 
         if (destino.Rol == RolUsuario.Recepcion)
             throw Falla("Recepción no atiende pacientes: elige a un nutricionista.");

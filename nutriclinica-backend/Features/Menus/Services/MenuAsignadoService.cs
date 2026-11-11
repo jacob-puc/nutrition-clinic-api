@@ -36,7 +36,7 @@ public class MenuAsignadoService : IMenuAsignadoService
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Id == menuId)
             ?? throw new KeyNotFoundException(
-                $"No se encontró un menú asignado con ID: {menuId}");
+                "No encontramos ese plan. Puede que se haya eliminado.");
 
         return await CargarMenuAsync(menuId);
     }
@@ -107,7 +107,7 @@ public class MenuAsignadoService : IMenuAsignadoService
             .Include(p => p.Detalles)
             .FirstOrDefaultAsync(p => p.Id == dto.PlantillaMenuId)
             ?? throw new KeyNotFoundException(
-                $"No se encontró una plantilla con ID: {dto.PlantillaMenuId}");
+                "No encontramos esa plantilla. Puede que se haya eliminado.");
 
         if (!plantilla.IsActive)
         {
@@ -169,7 +169,7 @@ public class MenuAsignadoService : IMenuAsignadoService
             .AsNoTracking()
             .Include(m => m.Detalles)
             .FirstOrDefaultAsync(m => m.Id == menuId)
-            ?? throw new KeyNotFoundException($"No se encontró un menú asignado con ID: {menuId}");
+            ?? throw new KeyNotFoundException("No encontramos ese plan. Puede que se haya eliminado.");
 
         if (pacienteId.HasValue && pacienteId.Value != original.PacienteId)
         {
@@ -223,7 +223,7 @@ public class MenuAsignadoService : IMenuAsignadoService
         var menu = await _context.MenusAsignados
             .FirstOrDefaultAsync(m => m.Id == menuId)
             ?? throw new KeyNotFoundException(
-                $"No se encontró un menú asignado con ID: {menuId}");
+                "No encontramos ese plan. Puede que se haya eliminado.");
 
         if (menu.Estado == MenuAsignadoEstado.Finalizado)
         {
@@ -315,7 +315,7 @@ public class MenuAsignadoService : IMenuAsignadoService
     {
         var menuAsignado = await _context.MenusAsignados
             .FirstOrDefaultAsync(p => p.Id == menuId)
-            ?? throw new KeyNotFoundException($"No se encontró el menú asignado con ID: {menuId}");
+            ?? throw new KeyNotFoundException("No encontramos ese plan. Puede que se haya eliminado.");
 
         if (menuAsignado.IsActive)
         {
@@ -331,7 +331,7 @@ public class MenuAsignadoService : IMenuAsignadoService
     {
         var menuAsignado = await _context.MenusAsignados
             .FirstOrDefaultAsync(m => m.Id == menuId)
-            ?? throw new KeyNotFoundException($"No se encontró el menú asignado con ID: {menuId}");
+            ?? throw new KeyNotFoundException("No encontramos ese plan. Puede que se haya eliminado.");
 
         if (!menuAsignado.IsActive)
         {
@@ -353,7 +353,7 @@ public class MenuAsignadoService : IMenuAsignadoService
         var menu = await _context.MenusAsignados
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Id == menuId)
-            ?? throw new KeyNotFoundException($"No se encontró un menú asignado con ID: {menuId}");
+            ?? throw new KeyNotFoundException("No encontramos ese plan. Puede que se haya eliminado.");
 
         var detalles = await _context.DetallesMenuAsignado
             .AsNoTracking()
@@ -483,7 +483,7 @@ public class MenuAsignadoService : IMenuAsignadoService
         if (!existe)
         {
             throw new KeyNotFoundException(
-                $"No se encontró un paciente activo con ID: {pacienteId}");
+                "No encontramos a ese paciente. Puede que se haya eliminado.");
         }
     }
 

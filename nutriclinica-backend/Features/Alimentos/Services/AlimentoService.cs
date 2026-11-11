@@ -88,7 +88,7 @@ public class AlimentoService : IAlimentoService
         var alimento = await _context.Alimentos
             .Include(a => a.Medidas)
             .FirstOrDefaultAsync(a => a.Id == alimentoId)
-            ?? throw new KeyNotFoundException($"No se encontró un alimento con ID: {alimentoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese alimento. Puede que se haya eliminado.");
 
         var nombreNormalizado = NormalizarNombre(dto.Nombre);
 
@@ -122,7 +122,7 @@ public class AlimentoService : IAlimentoService
             .AsNoTracking()
             .Include(a => a.Medidas)
             .FirstOrDefaultAsync(a => a.Id == alimentoId)
-            ?? throw new KeyNotFoundException($"No se encontró un alimento con ID: {alimentoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese alimento. Puede que se haya eliminado.");
 
         return MapToDto(alimento);
     }
@@ -166,7 +166,7 @@ public class AlimentoService : IAlimentoService
         var alimento = await _context.Alimentos
             .Include(a => a.Medidas)
             .FirstOrDefaultAsync(a => a.Id == alimentoId)
-            ?? throw new KeyNotFoundException($"No se encontró un alimento con ID: {alimentoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese alimento. Puede que se haya eliminado.");
 
         if (alimento.IsActive)
         {
@@ -188,7 +188,7 @@ public class AlimentoService : IAlimentoService
         var alimento = await _context.Alimentos
             .Include(a => a.Medidas)
             .FirstOrDefaultAsync(a => a.Id == alimentoId)
-            ?? throw new KeyNotFoundException($"No se encontró un alimento con ID: {alimentoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese alimento. Puede que se haya eliminado.");
 
         await using var buffer = new MemoryStream();
         await imagen.CopyToAsync(buffer);
@@ -219,7 +219,7 @@ public class AlimentoService : IAlimentoService
     {
         var alimento = await _context.Alimentos
             .FirstOrDefaultAsync(a => a.Id == alimentoId)
-            ?? throw new KeyNotFoundException($"No se encontró un alimento con ID: {alimentoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese alimento. Puede que se haya eliminado.");
 
         if (!alimento.IsActive)
         {

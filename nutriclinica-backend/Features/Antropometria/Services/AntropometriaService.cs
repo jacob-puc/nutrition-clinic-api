@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Entities;
 using nutriclinica_backend.Core.Utils;
@@ -34,7 +34,7 @@ public class AntropometriaService : IAntropometriaService
 
         if (!pacienteExiste)
         {
-            throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {pacienteId}");
+            throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
         }
 
         await ValidadorConsultaVinculo.ValidarPertenenciaAsync(_context, dto.ConsultaId, pacienteId);

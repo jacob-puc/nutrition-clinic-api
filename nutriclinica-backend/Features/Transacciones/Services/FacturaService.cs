@@ -35,7 +35,7 @@ public class FacturaService : IFacturaService
         var pago = await _context.Pagos
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == dto.PagoId)
-            ?? throw new KeyNotFoundException($"No se encontró el pago con ID: {dto.PagoId}");
+            ?? throw new KeyNotFoundException("No encontramos ese pago. Puede que se haya eliminado.");
 
         if (pago.Estado != EstadoPago.Pagado)
         {
@@ -157,7 +157,7 @@ public class FacturaService : IFacturaService
         var factura = await _context.Facturas
             .AsNoTracking()
             .FirstOrDefaultAsync(f => f.Id == facturaId)
-            ?? throw new KeyNotFoundException($"No se encontró la factura con ID: {facturaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa factura. Puede que se haya eliminado.");
 
         return MapToDto(factura);
     }
@@ -171,7 +171,7 @@ public class FacturaService : IFacturaService
             .Include(f => f.Pago)
                 .ThenInclude(p => p.Consulta)
             .FirstOrDefaultAsync(f => f.Id == facturaId)
-            ?? throw new KeyNotFoundException($"No se encontró la factura con ID: {facturaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa factura. Puede que se haya eliminado.");
 
         var clinica = await _context.DatosFiscalesClinica
             .AsNoTracking()

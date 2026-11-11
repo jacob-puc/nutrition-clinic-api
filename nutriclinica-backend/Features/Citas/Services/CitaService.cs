@@ -1,3 +1,4 @@
+using nutriclinica_backend.Core.Utils;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.DTOs;
@@ -58,12 +59,12 @@ public class CitaService : ICitaService
         var paciente = await _context.Pacientes
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == dto.PacienteId && p.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {dto.PacienteId}");
+            ?? throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
 
         var nutricionista = await _context.Nutricionistas
             .AsNoTracking()
             .FirstOrDefaultAsync(n => n.Id == dto.NutricionistaId && n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un nutricionista activo con ID: {dto.NutricionistaId}");
+            ?? throw new KeyNotFoundException("No encontramos a ese nutriólogo. Puede que se haya eliminado.");
         ValidarQueAtiende(nutricionista);
         await ValidarHorarioAsync(dto.NutricionistaId, dto.FechaInicio, dto.FechaFin);
 
@@ -93,24 +94,24 @@ public class CitaService : ICitaService
 
         var cita = await _context.Citas
             .FirstOrDefaultAsync(c => c.Id == citaId)
-            ?? throw new KeyNotFoundException($"No se encontró la cita con ID: {citaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa cita. Puede que se haya eliminado.");
 
         if (cita.Estado == EstadoCita.EnCurso || EsTerminal(cita.Estado))
         {
             throw new ValidationException(
-                $"No se puede modificar una cita en estado {cita.Estado}. Cambia su estado primero.");
+                $"No se puede modificar una cita en estado «{TextoEstado.Cita(cita.Estado)}». Cambia su estado primero.");
         }
 
         var nutricionista = await _context.Nutricionistas
             .AsNoTracking()
             .FirstOrDefaultAsync(n => n.Id == dto.NutricionistaId && n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un nutricionista activo con ID: {dto.NutricionistaId}");
+            ?? throw new KeyNotFoundException("No encontramos a ese nutriólogo. Puede que se haya eliminado.");
         ValidarQueAtiende(nutricionista);
 
         var paciente = await _context.Pacientes
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == cita.PacienteId && p.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró un paciente activo con ID: {cita.PacienteId}");
+            ?? throw new KeyNotFoundException("No encontramos a ese paciente. Puede que se haya eliminado.");
         /* Solo si cambia la franja o quien atiende: editar el motivo de una
            cita vieja no debe fallar porque despues cambio el horario. */
         var cambiaFranja = cita.NutricionistaId != dto.NutricionistaId
@@ -139,7 +140,7 @@ public class CitaService : ICitaService
             .Include(c => c.Consulta)
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == citaId)
-            ?? throw new KeyNotFoundException($"No se encontró la cita con ID: {citaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa cita. Puede que se haya eliminado.");
 
         return MapToDto(cita, cita.Paciente.NombreCompleto, cita.Nutricionista.NombreCompleto, cita.Consulta?.Id);
     }
@@ -153,14 +154,14 @@ public class CitaService : ICitaService
             .Include(c => c.Nutricionista)
             .Include(c => c.Consulta)
             .FirstOrDefaultAsync(c => c.Id == citaId)
-            ?? throw new KeyNotFoundException($"No se encontró la cita con ID: {citaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa cita. Puede que se haya eliminado.");
 
         var permitidas = TransicionesPermitidas[cita.Estado];
 
         if (!permitidas.Contains(dto.Estado))
         {
             throw new ConflictException(
-                $"No se puede cambiar el estado de la cita de {cita.Estado} a {dto.Estado}.");
+                $"No se puede pasar una cita de «{TextoEstado.Cita(cita.Estado)}» a «{TextoEstado.Cita(dto.Estado)}».");
         }
 
         cita.Estado = dto.Estado;
@@ -263,7 +264,7 @@ public class CitaService : ICitaService
     {
         var cita = await _context.Citas
             .FirstOrDefaultAsync(c => c.Id == citaId)
-            ?? throw new KeyNotFoundException($"No se encontró la cita con ID: {citaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa cita. Puede que se haya eliminado.");
 
         if (cita.Estado != EstadoCita.Programada)
         {

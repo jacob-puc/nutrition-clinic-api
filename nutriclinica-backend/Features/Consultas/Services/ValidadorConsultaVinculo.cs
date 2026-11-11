@@ -25,7 +25,7 @@ public static class ValidadorConsultaVinculo
         if (!pertenece)
         {
             throw new ValidationException(
-                $"La consulta {consultaId} no pertenece al paciente {pacienteId}.");
+                "Esta consulta es de otro paciente.");
         }
     }
 
@@ -45,7 +45,7 @@ public static class ValidadorConsultaVinculo
 
         if (!pacienteId.HasValue)
         {
-            throw new KeyNotFoundException($"No se encontró la consulta con ID: {consultaId}");
+            throw new KeyNotFoundException("No encontramos esa consulta. Puede que se haya eliminado.");
         }
 
         return pacienteId.Value;

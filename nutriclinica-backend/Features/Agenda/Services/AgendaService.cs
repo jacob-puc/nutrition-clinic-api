@@ -95,7 +95,7 @@ public class AgendaService : IAgendaService
 
         var persona = await _context.Nutricionistas
             .FirstOrDefaultAsync(n => n.Id == nutricionistaId && n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró una cuenta activa con ID: {nutricionistaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa cuenta. Puede que se haya eliminado.");
 
         var nuevos = dto.HorarioPropio ? Convertir(dto.Bloques, nutricionistaId) : [];
 
@@ -153,7 +153,7 @@ public class AgendaService : IAgendaService
         var persona = await _context.Nutricionistas
             .AsNoTracking()
             .FirstOrDefaultAsync(n => n.Id == nutricionistaId && n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró una cuenta activa con ID: {nutricionistaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa cuenta. Puede que se haya eliminado.");
 
         var traslape = await _context.Ausencias.AnyAsync(a =>
             a.NutricionistaId == nutricionistaId && a.FechaInicio <= dto.FechaFin && dto.FechaInicio <= a.FechaFin);
@@ -189,7 +189,7 @@ public class AgendaService : IAgendaService
     {
         var ausencia = await _context.Ausencias
             .FirstOrDefaultAsync(a => a.Id == ausenciaId && a.NutricionistaId == nutricionistaId)
-            ?? throw new KeyNotFoundException($"No se encontró la ausencia con ID: {ausenciaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa ausencia. Puede que se haya eliminado.");
 
         _context.Ausencias.Remove(ausencia);
         await _context.SaveChangesAsync();
@@ -265,7 +265,7 @@ public class AgendaService : IAgendaService
         var persona = await _context.Nutricionistas
             .AsNoTracking()
             .FirstOrDefaultAsync(n => n.Id == nutricionistaId && n.IsActive)
-            ?? throw new KeyNotFoundException($"No se encontró una cuenta activa con ID: {nutricionistaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa cuenta. Puede que se haya eliminado.");
 
         if (persona.Rol == RolUsuario.Recepcion)
             throw Falla("Recepción no atiende pacientes.");

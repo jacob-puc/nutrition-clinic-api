@@ -82,7 +82,7 @@ public class PlantillaMenuService : IPlantillaMenuService
 
         var plantilla = await _context.PlantillasMenu
             .FirstOrDefaultAsync(p => p.Id == plantillaId)
-            ?? throw new KeyNotFoundException($"No se encontró una plantilla con ID: {plantillaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa plantilla. Puede que se haya eliminado.");
 
         await ValidarPlatosAsync(dto.Detalles.Select(d => d.PlatoId));
         ValidarDuplicadosDeComida(dto.Detalles);
@@ -156,7 +156,7 @@ public class PlantillaMenuService : IPlantillaMenuService
 
         if (!existe)
         {
-            throw new KeyNotFoundException($"No se encontró una plantilla con ID: {plantillaId}");
+            throw new KeyNotFoundException("No encontramos esa plantilla. Puede que se haya eliminado.");
         }
 
         return await CargarPlantillaAsync(plantillaId);
@@ -234,7 +234,7 @@ public class PlantillaMenuService : IPlantillaMenuService
             .AsNoTracking()
             .Include(p => p.Detalles)
             .FirstOrDefaultAsync(p => p.Id == plantillaId)
-            ?? throw new KeyNotFoundException($"No se encontró una plantilla con ID: {plantillaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa plantilla. Puede que se haya eliminado.");
 
         var copia = new PlantillaMenu
         {
@@ -276,7 +276,7 @@ public class PlantillaMenuService : IPlantillaMenuService
     {
         var plantilla = await _context.PlantillasMenu
             .FirstOrDefaultAsync(p => p.Id == plantillaId)
-            ?? throw new KeyNotFoundException($"No se encontró una plantilla con ID: {plantillaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa plantilla. Puede que se haya eliminado.");
 
         if (plantilla.IsActive)
         {
@@ -291,7 +291,7 @@ public class PlantillaMenuService : IPlantillaMenuService
     {
         var plantilla = await _context.PlantillasMenu
             .FirstOrDefaultAsync(p => p.Id == plantillaId)
-            ?? throw new KeyNotFoundException($"No se encontró una plantilla con ID: {plantillaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa plantilla. Puede que se haya eliminado.");
 
         if (!plantilla.IsActive)
         {
@@ -322,7 +322,7 @@ public class PlantillaMenuService : IPlantillaMenuService
         var plantilla = await _context.PlantillasMenu
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == plantillaId)
-            ?? throw new KeyNotFoundException($"No se encontró una plantilla con ID: {plantillaId}");
+            ?? throw new KeyNotFoundException("No encontramos esa plantilla. Puede que se haya eliminado.");
 
         var detalles = await _context.DetallesPlantillaMenu
             .AsNoTracking()
@@ -445,7 +445,7 @@ public class PlantillaMenuService : IPlantillaMenuService
         if (!existe)
         {
             throw new KeyNotFoundException(
-                $"No se encontró un nutricionista activo con ID: {nutricionistaId}");
+                "No encontramos a ese nutriólogo. Puede que se haya eliminado.");
         }
     }
 
