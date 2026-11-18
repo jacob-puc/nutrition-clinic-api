@@ -19,6 +19,12 @@ public interface IReservaService
     Task<OpcionesReservaDto> ObtenerOpcionesAsync();
     Task<List<DiaPublicoDto>> ObtenerDisponibilidadAsync(Guid? nutricionistaId, DateOnly desde, DateOnly hasta);
     Task<ReservaConfirmadaDto> CrearAsync(CrearReservaDto dto);
+
+    /// <summary>
+    /// Reserva del paciente con sesion (app movil): mismas reglas que la
+    /// reservacion publica, pero ya sabemos quien es por su token.
+    /// </summary>
+    Task<ReservaConfirmadaDto> CrearParaPacienteAsync(Guid pacienteId, Guid? nutricionistaId, DateTime inicio, string? motivo);
 }
 
 /// <summary>
@@ -169,6 +175,51 @@ public class ReservaService : IReservaService
         });
 
         await transaccion.CommitAsync();
+
+        return new ReservaConfirmadaDto
+        {
+            FechaInicio = cita.FechaInicio,
+            FechaFin = cita.FechaFin,
+            NutricionistaNombre = cita.NutricionistaNombre,
+            Clinica = await ClinicaAsync()
+        };
+    }
+
+    public async Task<ReservaConfirmadaDto> CrearParaPacienteAsync(
+        Guid pacienteId, Guid? nutricionistaId, DateTime inicioSolicitado, string? motivo)
+    {
+        var inicio = DateTime.SpecifyKind(inicioSolicitado.ToUniversalTime(), DateTimeKind.Utc);
+        if (inicio < DateTime.UtcNow.AddHours(AnticipacionHoras))
+            throw Falla($"Reserva con al menos {AnticipacionHoras} horas de anticipación.", "inicio");
+
+        var fecha = DateOnly.FromDateTime(ZonaClinica.ALocal(inicio));
+        if (fecha > DateOnly.FromDateTime(ZonaClinica.Ahora()).AddDays(DiasMaximos))
+            throw Falla($"Solo se puede reservar con {DiasMaximos} días de anticipación como máximo.", "inicio");
+
+        if (motivo is { Length: > 500 }) throw Falla("El motivo no puede tener más de 500 caracteres.", "motivo");
+
+        // Una cita próxima a la vez, igual que en la reservación pública.
+        var tieneProxima = await _context.Citas.AnyAsync(c =>
+            c.PacienteId == pacienteId && EstadosVigentes.Contains(c.Estado) && c.FechaInicio > DateTime.UtcNow);
+        if (tieneProxima)
+            throw new ConflictException(
+                "Ya tienes una cita próxima. Para cambiarla, cancélala primero o comunícate con la clínica.");
+
+        var disponibles = await DisponibilidadesAsync(nutricionistaId, fecha, fecha);
+        var elegido = disponibles
+            .Select(d => new { d.NutricionistaId, Hueco = d.Dias.SelectMany(x => x.Huecos).FirstOrDefault(h => h.Inicio == inicio) })
+            .FirstOrDefault(x => x.Hueco is not null)
+            ?? throw new ConflictException("Ese horario acaba de ocuparse. Elige otro, por favor.");
+
+        var cita = await _citas.CrearCitaAsync(new CrearCitaDto
+        {
+            PacienteId = pacienteId,
+            NutricionistaId = elegido.NutricionistaId,
+            FechaInicio = elegido.Hueco!.Inicio,
+            FechaFin = elegido.Hueco.Fin,
+            Motivo = string.IsNullOrWhiteSpace(motivo) ? null : motivo.Trim(),
+            Canal = CanalCita.EnLinea
+        });
 
         return new ReservaConfirmadaDto
         {

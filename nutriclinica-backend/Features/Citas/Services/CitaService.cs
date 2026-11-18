@@ -8,6 +8,7 @@ using nutriclinica_backend.Core.Exceptions;
 using nutriclinica_backend.Features.Agenda.Services;
 using nutriclinica_backend.Features.Citas.DTOs;
 using nutriclinica_backend.Features.Citas.Interfaces;
+using nutriclinica_backend.Features.Notificaciones;
 using nutriclinica_backend.Infrastructure.Persistence;
 
 namespace nutriclinica_backend.Features.Citas.Services;
@@ -37,16 +38,19 @@ public class CitaService : ICitaService
     private readonly IValidator<ActualizarCitaDto> _actualizarCitaValidator;
     private readonly IValidator<CambiarEstadoCitaDto> _cambiarEstadoCitaValidator;
     private readonly IAgendaService _agenda;
+    private readonly INotificadorCitas _notificador;
 
     public CitaService(
         ApplicationDbContext context,
         IValidator<CrearCitaDto> crearCitaValidator,
         IValidator<ActualizarCitaDto> actualizarCitaValidator,
         IValidator<CambiarEstadoCitaDto> cambiarEstadoCitaValidator,
-        IAgendaService agenda)
+        IAgendaService agenda,
+        INotificadorCitas notificador)
     {
         _context = context;
         _agenda = agenda;
+        _notificador = notificador;
         _crearCitaValidator = crearCitaValidator;
         _actualizarCitaValidator = actualizarCitaValidator;
         _cambiarEstadoCitaValidator = cambiarEstadoCitaValidator;
@@ -83,6 +87,8 @@ public class CitaService : ICitaService
         };
 
         _context.Citas.Add(cita);
+        // El aviso se guarda en el mismo SaveChanges: sin cita no hay correo y viceversa.
+        await _notificador.CitaAgendadaAsync(cita, paciente, nutricionista);
         await _context.SaveChangesAsync();
 
         return MapToDto(cita, paciente.NombreCompleto, nutricionista.NombreCompleto, null);
@@ -122,10 +128,23 @@ public class CitaService : ICitaService
 
         await ValidarDisponibilidadAgendaAsync(dto.NutricionistaId, cita.PacienteId, dto.FechaInicio, dto.FechaFin, citaId);
 
+        var nutricionistaAnteriorId = cita.NutricionistaId;
+
         cita.NutricionistaId = dto.NutricionistaId;
         cita.FechaInicio = dto.FechaInicio;
         cita.FechaFin = dto.FechaFin;
         cita.Motivo = dto.Motivo;
+
+        /* Solo un cambio de horario o de quien atiende merece aviso; la
+           secuencia sube para que el calendario actualice el mismo evento. */
+        if (cambiaFranja)
+        {
+            cita.SecuenciaCalendario++;
+            var anterior = nutricionistaAnteriorId == dto.NutricionistaId
+                ? null
+                : await _context.Nutricionistas.AsNoTracking().FirstOrDefaultAsync(n => n.Id == nutricionistaAnteriorId);
+            await _notificador.CitaReprogramadaAsync(cita, paciente, nutricionista, anterior);
+        }
 
         await _context.SaveChangesAsync();
 
@@ -170,6 +189,8 @@ public class CitaService : ICitaService
         {
             cita.FechaCancelacion = DateTime.UtcNow;
             cita.MotivoCancelacion = dto.Motivo;
+            cita.SecuenciaCalendario++;
+            await _notificador.CitaCanceladaAsync(cita, cita.Paciente, cita.Nutricionista, dto.Motivo);
         }
 
         await _context.SaveChangesAsync();
@@ -263,6 +284,8 @@ public class CitaService : ICitaService
     public async Task EliminarCitaAsync(Guid citaId)
     {
         var cita = await _context.Citas
+            .Include(c => c.Paciente)
+            .Include(c => c.Nutricionista)
             .FirstOrDefaultAsync(c => c.Id == citaId)
             ?? throw new KeyNotFoundException("No encontramos esa cita. Puede que se haya eliminado.");
 
@@ -273,6 +296,9 @@ public class CitaService : ICitaService
                 "Usa el endpoint de cambio de estado para cancelarla.");
         }
 
+        // Ya se habia avisado al agendarla: quien la tenga en su calendario debe verla cancelada.
+        cita.SecuenciaCalendario++;
+        await _notificador.CitaCanceladaAsync(cita, cita.Paciente, cita.Nutricionista, null);
         _context.Citas.Remove(cita);
         await _context.SaveChangesAsync();
     }

@@ -16,6 +16,9 @@ using nutriclinica_backend.Features.Auth.Interfaces;
 using nutriclinica_backend.Features.Auth.Services;
 using nutriclinica_backend.Infrastructure.Security;
 using nutriclinica_backend.Infrastructure.Storage;
+using nutriclinica_backend.Infrastructure.Correo;
+using nutriclinica_backend.Features.Notificaciones;
+using nutriclinica_backend.Features.PortalPaciente;
 using nutriclinica_backend.Features.Antropometria.Interfaces;
 using nutriclinica_backend.Features.Antropometria.Services;
 using nutriclinica_backend.Features.Citas.Interfaces;
@@ -95,7 +98,16 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+/* Un [Authorize] sin roles exige ser personal de la clinica. Sin esto, un
+   token de paciente (app movil) pasaria por todos esos endpoints y veria a
+   otros pacientes. Los pacientes solo entran a /api/mi con Roles = Paciente. */
+builder.Services.AddAuthorization(options =>
+{
+    options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .RequireRole(Roles.Administrador, Roles.Nutricionista, Roles.Recepcion)
+        .Build();
+});
 
 var storageConfig = builder.Configuration
     .GetSection(StorageConfig.SectionName)
@@ -104,6 +116,28 @@ var storageConfig = builder.Configuration
 builder.Services.AddSingleton(storageConfig);
 builder.Services.AddHttpClient("supabase-storage");
 builder.Services.AddSingleton<IStorageService, SupabaseStorageService>();
+
+var correoConfig = builder.Configuration
+    .GetSection(CorreoConfig.SectionName)
+    .Get<CorreoConfig>() ?? new CorreoConfig();
+
+builder.Services.AddSingleton(correoConfig);
+builder.Services.AddHttpClient(BrevoEnvioCorreo.ClienteHttp, c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddSingleton<BrevoEnvioCorreo>();
+builder.Services.AddSingleton<SmtpEnvioCorreo>();
+builder.Services.AddSingleton<SelectorEnvioCorreo>();
+builder.Services.AddScoped<IColaCorreos, ColaCorreos>();
+builder.Services.AddScoped<INotificadorCitas, NotificadorCitas>();
+builder.Services.AddSingleton<EnlacesCita>();
+builder.Services.AddScoped<IEnvioDocumentos, EnvioDocumentos>();
+
+builder.Services.AddSingleton(builder.Configuration
+    .GetSection(GoogleConfig.SectionName)
+    .Get<GoogleConfig>() ?? new GoogleConfig());
+builder.Services.AddScoped<CuentaPacienteService>();
+builder.Services.AddScoped<PortalPacienteService>();
+builder.Services.AddHostedService<ProcesadorCorreos>();
+builder.Services.AddHostedService<RecordatorioCitas>();
 
 builder.Services.AddScoped<IPacienteService, PacienteService>();
 builder.Services.AddScoped<IHistorialClinicoService, HistorialClinicoService>();
@@ -134,6 +168,8 @@ builder.Services.AddRateLimiter(options =>
         IpDe(http), _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
     options.AddPolicy(LimitesReserva.Crear, http => RateLimitPartition.GetFixedWindowLimiter(
         IpDe(http), _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(15) }));
+    options.AddPolicy(LimitesReserva.Cuentas, http => RateLimitPartition.GetFixedWindowLimiter(
+        IpDe(http), _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(10) }));
 });
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();

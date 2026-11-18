@@ -25,5 +25,14 @@ public class Cita
     public DateTime? FechaCancelacion { get; set; }
     public string? MotivoCancelacion { get; set; }
 
+    /// <summary>SEQUENCE de la invitacion de calendario: sube en cada cambio avisado.</summary>
+    public int SecuenciaCalendario { get; set; }
+
+    /// <summary>
+    /// Inicio de la cita para el que ya se mando el recordatorio. Si la cita
+    /// se mueve, deja de coincidir y se recuerda la nueva hora.
+    /// </summary>
+    public DateTime? RecordatorioEnviadoPara { get; set; }
+
     public virtual Consulta? Consulta { get; set; }
 }

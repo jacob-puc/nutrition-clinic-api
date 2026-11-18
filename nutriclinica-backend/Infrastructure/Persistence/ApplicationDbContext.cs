@@ -31,6 +31,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<Pago> Pagos => Set<Pago>();
     public DbSet<Factura> Facturas => Set<Factura>();
     public DbSet<DatosFiscalesClinica> DatosFiscalesClinica => Set<DatosFiscalesClinica>();
+    public DbSet<CorreoSaliente> CorreosSalientes => Set<CorreoSaliente>();
+    public DbSet<CorreoAdjunto> CorreosAdjuntos => Set<CorreoAdjunto>();
+    public DbSet<CuentaPaciente> CuentasPaciente => Set<CuentaPaciente>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -143,6 +146,60 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(c => c.NutricionistaId);
             entity.HasIndex(c => new { c.PacienteId, c.FechaInicio });
             entity.HasIndex(c => c.FechaInicio);
+            entity.Property(c => c.SecuenciaCalendario).HasDefaultValue(0);
+        });
+
+        modelBuilder.Entity<CorreoSaliente>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Para).HasMaxLength(256).IsRequired();
+            entity.Property(c => c.ParaNombre).HasMaxLength(200);
+            entity.Property(c => c.Asunto).HasMaxLength(300).IsRequired();
+            entity.Property(c => c.Tipo).HasMaxLength(60).IsRequired();
+            entity.Property(c => c.IcsMetodo).HasMaxLength(20);
+            entity.Property(c => c.Proveedor).HasMaxLength(20);
+            entity.Property(c => c.UltimoError).HasMaxLength(1000);
+            entity.Property(c => c.Estado).HasConversion<string>().HasMaxLength(20);
+
+            // El procesador busca pendientes por fecha; la web, por referencia (cita, plan...).
+            entity.HasIndex(c => new { c.Estado, c.ProximoIntento });
+            entity.HasIndex(c => c.ReferenciaId);
+
+            entity.HasMany(c => c.Adjuntos)
+                .WithOne()
+                .HasForeignKey(a => a.CorreoSalienteId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CuentaPaciente>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Correo).HasMaxLength(256).IsRequired();
+            entity.HasIndex(c => c.Correo).IsUnique();
+            entity.HasIndex(c => c.GoogleId).IsUnique().HasFilter("\"GoogleId\" IS NOT NULL");
+            // Un expediente, una cuenta.
+            entity.HasIndex(c => c.PacienteId).IsUnique().HasFilter("\"PacienteId\" IS NOT NULL");
+            entity.HasIndex(c => c.RefreshToken);
+
+            entity.HasOne(c => c.Paciente)
+                .WithMany()
+                .HasForeignKey(c => c.PacienteId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.Property(c => c.GoogleId).HasMaxLength(100);
+            entity.Property(c => c.NombreRegistro).HasMaxLength(150).IsRequired();
+            entity.Property(c => c.TelefonoRegistro).HasMaxLength(30);
+            entity.Property(c => c.SexoRegistro).HasConversion<string>().HasMaxLength(10);
+            entity.Property(c => c.CodigoHash).HasMaxLength(100);
+            entity.Property(c => c.CodigoProposito).HasMaxLength(20);
+            entity.Property(c => c.RefreshToken).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<CorreoAdjunto>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.Nombre).HasMaxLength(200).IsRequired();
+            entity.Property(a => a.TipoContenido).HasMaxLength(100).IsRequired();
         });
 
         modelBuilder.Entity<Consulta>(entity =>

@@ -146,6 +146,14 @@ namespace nutriclinica_backend.Migrations
                     b.Property<Guid>("PacienteId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("RecordatorioEnviadoPara")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SecuenciaCalendario")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.HasKey("Id");
 
                     b.HasIndex("FechaInicio");
@@ -199,6 +207,204 @@ namespace nutriclinica_backend.Migrations
                     b.HasIndex("PacienteId", "FechaInicio");
 
                     b.ToTable("Consultas");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.CorreoAdjunto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Contenido")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("CorreoSalienteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TipoContenido")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorreoSalienteId");
+
+                    b.ToTable("CorreosAdjuntos");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.CorreoSaliente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Asunto")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("CuerpoHtml")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CuerpoTexto")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("EnviadoPorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaEnvio")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Ics")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IcsMetodo")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("Intentos")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Para")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ParaNombre")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Proveedor")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("ProximoIntento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReferenciaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("UltimoError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReferenciaId");
+
+                    b.HasIndex("Estado", "ProximoIntento");
+
+                    b.ToTable("CorreosSalientes");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.CuentaPaciente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CodigoEnviadoEn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CodigoExpira")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CodigoHash")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("CodigoIntentos")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodigoProposito")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("CorreoVerificado")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GoogleId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NombreRegistro")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<Guid?>("PacienteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RefreshToken")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("RefreshTokenExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SexoRegistro")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("TelefonoRegistro")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("UltimoAcceso")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Correo")
+                        .IsUnique();
+
+                    b.HasIndex("GoogleId")
+                        .IsUnique()
+                        .HasFilter("\"GoogleId\" IS NOT NULL");
+
+                    b.HasIndex("PacienteId")
+                        .IsUnique()
+                        .HasFilter("\"PacienteId\" IS NOT NULL");
+
+                    b.HasIndex("RefreshToken");
+
+                    b.ToTable("CuentasPaciente");
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.DatosFiscalesClinica", b =>
@@ -1103,6 +1309,25 @@ namespace nutriclinica_backend.Migrations
                     b.Navigation("Paciente");
                 });
 
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.CorreoAdjunto", b =>
+                {
+                    b.HasOne("nutriclinica_backend.Core.Entities.CorreoSaliente", null)
+                        .WithMany("Adjuntos")
+                        .HasForeignKey("CorreoSalienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.CuentaPaciente", b =>
+                {
+                    b.HasOne("nutriclinica_backend.Core.Entities.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Paciente");
+                });
+
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.DetalleMenuAsignado", b =>
                 {
                     b.HasOne("nutriclinica_backend.Core.Entities.MenuAsignado", "MenuAsignado")
@@ -1322,6 +1547,11 @@ namespace nutriclinica_backend.Migrations
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.Cita", b =>
                 {
                     b.Navigation("Consulta");
+                });
+
+            modelBuilder.Entity("nutriclinica_backend.Core.Entities.CorreoSaliente", b =>
+                {
+                    b.Navigation("Adjuntos");
                 });
 
             modelBuilder.Entity("nutriclinica_backend.Core.Entities.MenuAsignado", b =>

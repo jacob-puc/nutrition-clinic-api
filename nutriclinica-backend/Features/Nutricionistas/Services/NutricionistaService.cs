@@ -8,6 +8,7 @@ using nutriclinica_backend.Features.Agenda.Services;
 using nutriclinica_backend.Features.Auth.Services;
 using nutriclinica_backend.Features.Nutricionistas.DTOs;
 using nutriclinica_backend.Features.Nutricionistas.Interfaces;
+using nutriclinica_backend.Features.Notificaciones;
 using nutriclinica_backend.Infrastructure.Persistence;
 
 namespace nutriclinica_backend.Features.Nutricionistas.Services;
@@ -32,15 +33,18 @@ public class NutricionistaService : INutricionistaService
     private readonly IValidator<CrearNutricionistaDto> _crearNutricionistaValidator;
     private readonly IValidator<ActualizarNutricionistaDto> _actualizarNutricionistaValidator;
     private readonly IAgendaService _agenda;
+    private readonly INotificadorCitas _notificador;
 
     public NutricionistaService(
         ApplicationDbContext context,
         IValidator<CrearNutricionistaDto> crearNutricionistaValidator,
         IValidator<ActualizarNutricionistaDto> actualizarNutricionistaValidator,
-        IAgendaService agenda)
+        IAgendaService agenda,
+        INotificadorCitas notificador)
     {
         _context = context;
         _agenda = agenda;
+        _notificador = notificador;
         _crearNutricionistaValidator = crearNutricionistaValidator;
         _actualizarNutricionistaValidator = actualizarNutricionistaValidator;
     }
@@ -248,6 +252,7 @@ public class NutricionistaService : INutricionistaService
         var ahora = DateTime.UtcNow;
         var citas = await _context.Citas
             .Include(c => c.Paciente)
+            .Include(c => c.Nutricionista)
             .Where(c => c.NutricionistaId == id
                         && EstadosPendientes.Contains(c.Estado)
                         && c.FechaFin > ahora)
@@ -295,7 +300,11 @@ public class NutricionistaService : INutricionistaService
                 continue;
             }
 
+            var anterior = cita.Nutricionista;
             cita.NutricionistaId = destinoId;
+            cita.SecuenciaCalendario++;
+            // Paciente y ambos nutriologos se enteran; el calendario mueve el evento.
+            await _notificador.CitaReprogramadaAsync(cita, cita.Paciente, destino, anterior);
             agendaDestino.Add(new FranjaOcupada(cita.FechaInicio, cita.FechaFin));
             resultado.Reasignadas++;
         }

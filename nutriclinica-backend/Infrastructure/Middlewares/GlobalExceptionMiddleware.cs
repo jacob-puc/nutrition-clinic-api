@@ -36,6 +36,11 @@ public class GlobalExceptionMiddleware
                     .Select(e => new ErrorDetalleDto { Campo = e.PropertyName, Mensaje = e.ErrorMessage })
                     .ToList());
         }
+        catch (Features.PortalPaciente.CorreoNoVerificadoException ex)
+        {
+            // La app reconoce el codigo y pasa a la pantalla de "escribe el codigo".
+            await EscribirErrorAsync(context, StatusCodes.Status403Forbidden, "CORREO_NO_VERIFICADO", ex.Message);
+        }
         catch (UnauthorizedAccessException ex)
         {
             await EscribirErrorAsync(context, StatusCodes.Status401Unauthorized, "NO_AUTORIZADO", ex.Message);

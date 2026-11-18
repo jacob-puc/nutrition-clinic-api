@@ -53,4 +53,7 @@ public static class LimitesReserva
 {
     public const string Consulta = "reserva-consulta";
     public const string Crear = "reserva-crear";
+
+    /// <summary>Cuentas de paciente: registro, codigos e inicio de sesion.</summary>
+    public const string Cuentas = "cuentas-paciente";
 }
