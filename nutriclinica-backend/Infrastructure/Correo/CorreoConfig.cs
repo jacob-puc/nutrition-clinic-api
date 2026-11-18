@@ -34,6 +34,12 @@ public class CorreoConfig
     /// </summary>
     public string? UrlApi { get; set; }
 
+    /// <summary>
+    /// Enlace para descargar la app (p. ej. el APK publicado). Si existe, la
+    /// invitacion a la app lleva el boton "Descargar la app".
+    /// </summary>
+    public string? UrlApp { get; set; }
+
     /// <summary>Correos sin enviar con mas antiguedad que esto se descartan.</summary>
     public int HorasMaximasEnCola { get; set; } = 48;
 

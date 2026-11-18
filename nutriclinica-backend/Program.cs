@@ -135,6 +135,7 @@ builder.Services.AddSingleton(builder.Configuration
     .GetSection(GoogleConfig.SectionName)
     .Get<GoogleConfig>() ?? new GoogleConfig());
 builder.Services.AddScoped<CuentaPacienteService>();
+builder.Services.AddScoped<InvitacionesApp>();
 builder.Services.AddScoped<PortalPacienteService>();
 builder.Services.AddHostedService<ProcesadorCorreos>();
 builder.Services.AddHostedService<RecordatorioCitas>();
