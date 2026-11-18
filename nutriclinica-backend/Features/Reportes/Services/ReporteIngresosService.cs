@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using nutriclinica_backend.Core.Enums;
 using nutriclinica_backend.Core.Utils;
 using nutriclinica_backend.Features.Reportes.DTOs;
+using nutriclinica_backend.Features.Reportes.Pdf;
 using nutriclinica_backend.Infrastructure.Persistence;
 
 namespace nutriclinica_backend.Features.Reportes.Services;
@@ -12,6 +13,9 @@ namespace nutriclinica_backend.Features.Reportes.Services;
 public interface IReporteIngresosService
 {
     Task<ReporteIngresosDto> ObtenerAsync(ReporteIngresosFiltroDto filtro);
+
+    /// <summary>El mismo reporte en PDF, con el detalle de cobros y lo pendiente.</summary>
+    Task<(byte[] Pdf, string Nombre)> PdfAsync(ReporteIngresosFiltroDto filtro);
 }
 
 public class ReporteIngresosService : IReporteIngresosService
@@ -133,6 +137,53 @@ public class ReporteIngresosService : IReporteIngresosService
                 .Select(g => new IngresoPorTipoDto(g.Key, g.Sum(p => p.Monto), g.Count()))
                 .OrderByDescending(x => x.Total)
                 .ToList());
+    }
+
+    public async Task<(byte[] Pdf, string Nombre)> PdfAsync(ReporteIngresosFiltroDto filtro)
+    {
+        const int maximoFilas = 1000;
+        var reporte = await ObtenerAsync(filtro);
+        var (desde, hasta) = (reporte.Desde, reporte.Hasta);
+        var nutricionista = filtro.NutricionistaId;
+
+        var cobros = await _context.Pagos.AsNoTracking()
+            .Where(p => p.FechaPago >= desde && p.FechaPago <= hasta)
+            .Where(p => nutricionista == null || p.Consulta.NutricionistaId == nutricionista)
+            .OrderBy(p => p.FechaPago)
+            .Select(p => new ReporteIngresosPdf.CobroFila(
+                p.NumeroRecibo,
+                p.FechaPago,
+                p.Paciente.NombreCompleto,
+                p.Consulta.Nutricionista.NombreCompleto,
+                p.Consulta.TipoConsulta,
+                p.MetodoPago,
+                p.Monto,
+                p.Estado == EstadoPago.Anulado))
+            .ToListAsync();
+
+        var pendientes = await _context.Consultas.AsNoTracking()
+            .Where(c => c.FechaFin >= desde && c.FechaFin <= hasta)
+            .Where(c => nutricionista == null || c.NutricionistaId == nutricionista)
+            .Where(c => !_context.Pagos.Any(p => p.ConsultaId == c.Id && p.Estado == EstadoPago.Pagado))
+            .OrderBy(c => c.FechaFin)
+            .Select(c => new ReporteIngresosPdf.PendienteFila(
+                c.FechaFin!.Value,
+                c.Paciente.NombreCompleto,
+                c.Nutricionista.NombreCompleto,
+                c.TipoConsulta))
+            .ToListAsync();
+
+        var alcance = nutricionista is null
+            ? "Todo el equipo"
+            : await _context.Nutricionistas.AsNoTracking()
+                .Where(n => n.Id == nutricionista)
+                .Select(n => n.NombreCompleto)
+                .FirstOrDefaultAsync() ?? "Nutricionista";
+
+        var clinica = await _context.DatosFiscalesClinica.AsNoTracking().FirstOrDefaultAsync();
+        var pdf = ReporteIngresosPdf.Generar(reporte, cobros, pendientes, alcance, clinica, maximoFilas);
+        var nombre = $"reporte-ingresos-{ZonaClinica.Formatear(desde, "yyyy-MM-dd")}-a-{ZonaClinica.Formatear(hasta, "yyyy-MM-dd")}.pdf";
+        return (pdf, nombre);
     }
 
     private static (DateTime Desde, DateTime Hasta) Validar(ReporteIngresosFiltroDto filtro)

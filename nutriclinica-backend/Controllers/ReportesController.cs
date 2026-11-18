@@ -31,6 +31,14 @@ public class ReportesController : ControllerBase
         return Ok(await _ingresos.ObtenerAsync(filtro));
     }
 
+    [Authorize(Roles = Roles.Administrador)]
+    [HttpGet("api/reportes/ingresos/pdf")]
+    public async Task<IActionResult> IngresosPdf([FromQuery] ReporteIngresosFiltroDto filtro)
+    {
+        var (pdf, nombre) = await _ingresos.PdfAsync(filtro);
+        return File(pdf, "application/pdf", nombre);
+    }
+
     [HttpGet("api/menu-asignados/{menuId:guid}/pdf")]
     public async Task<IActionResult> MenuPaciente(Guid menuId)
     {
